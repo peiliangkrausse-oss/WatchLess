@@ -54,6 +54,8 @@ class LMStudioClient:
         for item in raw_models:
             if not isinstance(item, dict):
                 continue
+            if item.get("type") != "llm":
+                continue
             loaded_instances = item.get("loaded_instances") or []
             models.append({
                 "key": item.get("key") or item.get("id") or "",

@@ -4,8 +4,8 @@ from pathlib import Path
 APP_NAME = "YouTube Summary App"
 PORT = 5055
 LM_STUDIO_PORT = 1234
-LM_STUDIO_BASE_URL = f"http://localhost:{LM_STUDIO_PORT}/v1"
-LM_STUDIO_NATIVE_BASE_URL = f"http://localhost:{LM_STUDIO_PORT}/api/v1"
+LM_STUDIO_BASE_URL = f"http://127.0.0.1:{LM_STUDIO_PORT}/v1"
+LM_STUDIO_NATIVE_BASE_URL = f"http://127.0.0.1:{LM_STUDIO_PORT}/api/v1"
 
 SUPPORTED_TRANSCRIPT_LANGUAGES = [
     "en",

@@ -331,12 +331,16 @@ async function refreshModels() {
   loadModelBtn.disabled = true;
   unloadModelBtn.disabled = true;
   try {
-    const data = await requestJson(api.models);
+    const response = await fetch(api.models);
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || `Request failed: ${response.status}`);
+    }
     state.modelInventory = data;
     modelSelect.innerHTML = "";
     const available = data.models || [];
     if (!available.length) {
-      modelSelect.innerHTML = '<option value="">No local models found</option>';
+      modelSelect.innerHTML = '<option value="">No local chat models found</option>';
     }
     for (const model of available) {
       const option = document.createElement("option");
@@ -346,14 +350,27 @@ async function refreshModels() {
       modelSelect.appendChild(option);
     }
     if (data.current_model) modelSelect.value = data.current_model;
-    modelStatus.textContent = data.message || "Connected to LM Studio.";
-    advancedHint.textContent = data.current_model ? "Model loaded" : "Choose model";
-    if (!data.ok) modelStatus.classList.add(data.status === "multiple_models" ? "warning" : "error");
+    if (data.current_model) {
+      modelStatus.textContent = `🟢 Model loaded: ${data.current_model}`;
+      advancedHint.textContent = "Model loaded";
+    } else if (data.status === "no_model") {
+      modelStatus.textContent = "🟡 LM Studio is connected. Choose a model and click Load Selected.";
+      advancedHint.textContent = "Load a model";
+      modelStatus.classList.add("warning");
+    } else if (data.status === "multiple_models") {
+      modelStatus.textContent = "🔴 Multiple models are loaded. Unload extras before summarizing.";
+      advancedHint.textContent = "Too many models";
+      modelStatus.classList.add("error");
+    } else {
+      modelStatus.textContent = `🔴 ${data.message || "LM Studio needs attention."}`;
+      advancedHint.textContent = "Needs LM Studio";
+      modelStatus.classList.add("error");
+    }
     updateModelButtons();
   } catch (error) {
     state.modelInventory = null;
     modelSelect.innerHTML = '<option value="">LM Studio unavailable</option>';
-    modelStatus.textContent = "Could not detect LM Studio. Start the local server on port 1234.";
+    modelStatus.textContent = "🔴 LM Studio is not connected. Start the local server at http://127.0.0.1:1234.";
     modelStatus.classList.add("error");
     advancedHint.textContent = "Needs LM Studio";
     summarizeBtn.disabled = true;
