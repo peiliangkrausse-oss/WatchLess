@@ -39,8 +39,8 @@
         </select>
         <div class="model-status" id="modelStatus">Checking LM Studio model...</div>
         <div class="model-actions">
-          <button type="button" id="loadModelBtn">Load Selected</button>
-          <button type="button" class="secondary-action" id="unloadModelBtn">Unload Loaded</button>
+          <button type="button" id="loadModelBtn">Use This Model</button>
+          <button type="button" class="model-stop-action" id="unloadModelBtn">Stop Current Model</button>
         </div>
         <div class="model-disclaimer">Keep only one model loaded at a time. Loading two large models can overload RAM and crash or freeze smaller laptops.</div>
 
@@ -52,6 +52,14 @@
           <div class="advanced-title">
             <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h16M4 19h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Prompt Preset
+            <button class="mini-action" type="button" id="viewPresetsBtn">View Presets</button>
+          </div>
+          <div class="preset-drawer" id="presetDrawer" hidden>
+            <div class="preset-save-row">
+              <input id="presetNameInput" placeholder="Preset name, e.g. Study Notes" autocomplete="off">
+              <button type="button" id="savePresetBtn">Save Preset</button>
+            </div>
+            <div class="preset-list" id="presetList"></div>
           </div>
           <textarea id="promptEditor" spellcheck="true" placeholder="Loading your summarization prompt..."></textarea>
           <div class="prompt-actions">

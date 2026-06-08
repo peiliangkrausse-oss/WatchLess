@@ -26,6 +26,7 @@ APP_SUPPORT_DIR = (
     Path.home() / "Library" / "Application Support" / APP_NAME
 )
 PROMPT_PRESET_FILE = APP_SUPPORT_DIR / "prompt_preset.json"
+PROMPT_PRESETS_DIR = APP_SUPPORT_DIR / "prompt_presets"
 HISTORY_DIR = APP_SUPPORT_DIR / "history"
 
 MAX_TRANSCRIPT_WORDS = 12000

@@ -23,6 +23,9 @@ class SummaryJob:
     title: str = ""
     summary: str = ""
     model: str = ""
+    tokens_per_second: float | None = None
+    completion_tokens: int | None = None
+    elapsed_seconds: float | None = None
     error: str = ""
     error_type: str = ""
     history_id: str = ""
@@ -39,13 +42,14 @@ class SummaryJobQueue:
         self._worker = threading.Thread(target=self._work, daemon=True)
         self._worker.start()
 
-    def submit(self, url: str, requested_model: str = "") -> SummaryJob:
+    def submit(self, url: str, requested_model: str = "", title: str = "") -> SummaryJob:
         if not (url or "").strip():
             raise AppError("Paste at least one YouTube URL first.", "missing_url")
         job = SummaryJob(
             id=uuid.uuid4().hex,
             url=url.strip(),
             requested_model=(requested_model or "").strip(),
+            title=(title or "").strip(),
             created_at=_now(),
             updated_at=_now(),
         )
@@ -71,8 +75,8 @@ class SummaryJobQueue:
             job.updated_at = _now()
 
     def _progress(self, job_id: str):
-        def update(progress: int, message: str) -> None:
-            self._update(job_id, progress=progress, message=message)
+        def update(progress: int, message: str, **changes) -> None:
+            self._update(job_id, progress=progress, message=message, **changes)
         return update
 
     def _work(self) -> None:
@@ -102,6 +106,9 @@ class SummaryJobQueue:
                 title=result["title"],
                 summary=result["summary"],
                 model=result["model"],
+                tokens_per_second=result.get("tokens_per_second"),
+                completion_tokens=result.get("completion_tokens"),
+                elapsed_seconds=result.get("elapsed_seconds"),
                 history_id=result["history"]["id"],
             )
         except AppError as exc:
@@ -131,4 +138,3 @@ class SummaryJobQueue:
 
 def serialize_job(job: SummaryJob) -> dict:
     return asdict(job)
-

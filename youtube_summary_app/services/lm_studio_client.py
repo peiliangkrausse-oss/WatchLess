@@ -1,3 +1,5 @@
+import time
+
 import requests
 
 from youtube_summary_app.config import LM_STUDIO_BASE_URL, LM_STUDIO_NATIVE_BASE_URL
@@ -243,7 +245,8 @@ class LMStudioClient:
             )
         return current_model
 
-    def summarize(self, transcript: str, system_prompt: str, model: str) -> str:
+    def summarize(self, transcript: str, system_prompt: str, model: str) -> dict:
+        started_at = time.monotonic()
         try:
             response = requests.post(
                 f"{self.base_url}/chat/completions",
@@ -286,6 +289,17 @@ class LMStudioClient:
 
         try:
             payload = response.json()
-            return payload["choices"][0]["message"]["content"].strip()
+            summary = payload["choices"][0]["message"]["content"].strip()
+            elapsed_seconds = max(time.monotonic() - started_at, 0.01)
+            usage = payload.get("usage", {}) if isinstance(payload, dict) else {}
+            completion_tokens = usage.get("completion_tokens") or usage.get("output_tokens") or 0
+            tokens_per_second = round(float(completion_tokens) / elapsed_seconds, 2) if completion_tokens else None
+            return {
+                "text": summary,
+                "usage": usage,
+                "completion_tokens": completion_tokens,
+                "elapsed_seconds": round(elapsed_seconds, 2),
+                "tokens_per_second": tokens_per_second,
+            }
         except Exception as exc:
             raise ModelError("LM Studio returned an unexpected response format.") from exc

@@ -1,5 +1,9 @@
+import json
 import re
+import subprocess
+from urllib.parse import quote_plus
 
+import requests
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from youtube_summary_app.config import MAX_TRANSCRIPT_WORDS, SUPPORTED_TRANSCRIPT_LANGUAGES
@@ -20,6 +24,61 @@ class TranscriptService:
             if match:
                 return match.group(1)
         raise TranscriptError("Paste a valid YouTube URL first.")
+
+    def fetch_metadata(self, url: str) -> dict:
+        video_id = self.extract_video_id(url)
+        fallback = {
+            "video_id": video_id,
+            "url": url.strip(),
+            "title": f"YouTube video {video_id}",
+        }
+        command = [
+            "yt-dlp",
+            "--skip-download",
+            "--dump-single-json",
+            "--no-playlist",
+            url.strip(),
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=25,
+            )
+            if result.returncode != 0 or not result.stdout.strip():
+                return fallback
+            payload = json.loads(result.stdout)
+            title = payload.get("title") if isinstance(payload, dict) else ""
+            return {
+                "video_id": video_id,
+                "url": url.strip(),
+                "title": title.strip() if isinstance(title, str) and title.strip() else fallback["title"],
+                "channel": payload.get("channel") if isinstance(payload, dict) else "",
+                "duration": payload.get("duration") if isinstance(payload, dict) else None,
+            }
+        except Exception:
+            pass
+
+        try:
+            response = requests.get(
+                f"https://www.youtube.com/oembed?url={quote_plus(url.strip())}&format=json",
+                timeout=8,
+            )
+            if response.ok:
+                payload = response.json()
+                title = payload.get("title", "")
+                if isinstance(title, str) and title.strip():
+                    return {
+                        **fallback,
+                        "title": title.strip(),
+                        "channel": payload.get("author_name", ""),
+                    }
+        except Exception:
+            pass
+
+        return fallback
 
     def fetch(self, url: str) -> dict:
         video_id = self.extract_video_id(url)
@@ -61,12 +120,14 @@ class TranscriptService:
             transcript_text += "\n\n[Transcript trimmed at 12,000 words.]"
             trimmed = True
 
+        metadata = self.fetch_metadata(url)
+
         return {
             "video_id": video_id,
             "url": url.strip(),
+            "title": metadata.get("title") or f"YouTube video {video_id}",
             "text": transcript_text,
             "word_count": len(words),
             "trimmed": trimmed,
             "language": getattr(transcript, "language_code", None),
         }
-

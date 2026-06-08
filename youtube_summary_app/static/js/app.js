@@ -4,6 +4,8 @@ const api = {
   modelUnload: "/api/models/unload",
   prompt: "/api/prompt",
   promptReset: "/api/prompt/reset",
+  promptPresets: "/api/prompt/presets",
+  videoMetadata: "/api/videos/metadata",
   jobs: "/api/jobs",
   history: "/api/history"
 };
@@ -25,6 +27,11 @@ const unloadModelBtn = document.getElementById("unloadModelBtn");
 const advancedHint = document.getElementById("advancedHint");
 const promptEditor = document.getElementById("promptEditor");
 const promptStatus = document.getElementById("promptStatus");
+const viewPresetsBtn = document.getElementById("viewPresetsBtn");
+const presetDrawer = document.getElementById("presetDrawer");
+const presetNameInput = document.getElementById("presetNameInput");
+const savePresetBtn = document.getElementById("savePresetBtn");
+const presetList = document.getElementById("presetList");
 const chromeTabs = document.getElementById("chromeTabs");
 const newTabBtn = document.getElementById("newTabBtn");
 const queueList = document.getElementById("queueList");
@@ -38,7 +45,8 @@ const state = {
   activeTabId: "",
   jobs: new Map(),
   pollTimer: null,
-  modelInventory: null
+  modelInventory: null,
+  promptPresets: []
 };
 
 let dragging = false;
@@ -126,15 +134,54 @@ function titleFromUrl(url) {
   try {
     const parsed = new URL(url);
     const id = parsed.searchParams.get("v") || parsed.pathname.split("/").filter(Boolean).pop();
-    return id ? `Video ${id}` : "New Summary";
+    return id ? `Resolving title for ${id}` : "New Summary";
   } catch {
     return "New Summary";
+  }
+}
+
+async function fetchVideoMetadata(urls) {
+  try {
+    const data = await requestJson(api.videoMetadata, {
+      method: "POST",
+      body: JSON.stringify({ urls })
+    });
+    const titleMap = {};
+    for (const item of data.items || []) {
+      if (item.url && item.title) titleMap[item.url] = item.title;
+    }
+    return titleMap;
+  } catch {
+    return {};
   }
 }
 
 function setProgress(percent, visible) {
   progressTrack.hidden = !visible;
   progressFill.style.width = `${Math.max(0, Math.min(100, Number(percent) || 0))}%`;
+}
+
+function visibleProgress(tab) {
+  if (!tab) return 0;
+  const raw = Number(tab.progress) || 0;
+  if (tab.jobStatus === "running") {
+    const age = Math.max(0, Date.now() - (tab.startedAt || Date.now()));
+    const eased = 88 * (1 - Math.exp(-age / 9500));
+    return Math.max(raw, Math.min(88, eased));
+  }
+  if (tab.jobStatus === "queued") return Math.max(raw, 6);
+  return raw;
+}
+
+function progressMeta(tab) {
+  if (!tab) return "";
+  const pieces = [];
+  if (tab.jobStatus === "queued") pieces.push("Queued");
+  if (tab.jobStatus === "running") pieces.push(tab.statusText || "Generating summary");
+  if (tab.jobStatus === "succeeded") pieces.push("Done");
+  if (tab.jobStatus === "failed") pieces.push("Failed");
+  if (tab.tokensPerSecond) pieces.push(`${tab.tokensPerSecond} tok/s`);
+  return pieces.join(" · ");
 }
 
 function guideHtml() {
@@ -186,6 +233,19 @@ function emptyHtml(message) {
   return `<div class="empty"><svg viewBox="0 0 24 24" fill="none"><path d="M8 5.5v13l10-6.5-10-6.5Z" fill="currentColor"/><path d="M4 5h1M4 12h1M4 19h1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><div>${escapeHtml(message)}</div></div>`;
 }
 
+function loadingHtml(tab) {
+  const percent = visibleProgress(tab);
+  return `
+    <div class="summary-loading">
+      <div class="summary-loading__top">
+        <strong>${escapeHtml(tab.title || "Preparing summary")}</strong>
+        <span>${Math.round(percent)}%</span>
+      </div>
+      <div class="summary-loading__bar"><span style="width:${Math.max(5, Math.min(100, percent))}%"></span></div>
+      <div class="summary-loading__meta">${escapeHtml(progressMeta(tab) || "Queued")}</div>
+    </div>`;
+}
+
 function createTab({ title = "New Summary", type = "draft", url = "", markdown = "", statusText = "", jobId = "", historyId = "", activate = true } = {}) {
   const tab = {
     id: uid("tab"),
@@ -198,6 +258,10 @@ function createTab({ title = "New Summary", type = "draft", url = "", markdown =
     historyId,
     progress: 0,
     jobStatus: "",
+    startedAt: 0,
+    tokensPerSecond: null,
+    completionTokens: null,
+    elapsedSeconds: null,
     error: ""
   };
   state.tabs.push(tab);
@@ -221,14 +285,18 @@ function activateTab(tabId) {
   const tab = activeTab();
   if (!tab) return;
   summaryTitleText.textContent = tab.title;
-  urlInput.value = tab.url || "";
-  setProgress(tab.progress || 0, ["queued", "running"].includes(tab.jobStatus));
+  if (["draft", "job"].includes(tab.type)) {
+    urlInput.value = tab.url || "";
+  }
+  setProgress(visibleProgress(tab), ["queued", "running"].includes(tab.jobStatus));
   if (tab.type === "guide") {
     summary.innerHTML = guideHtml();
   } else if (tab.error) {
     summary.innerHTML = `<div class="error-card"><strong>Something needs attention.</strong><br>${escapeHtml(tab.error)}</div>`;
   } else if (tab.markdown) {
     summary.innerHTML = markdownToHtml(tab.markdown);
+  } else if (["queued", "running"].includes(tab.jobStatus)) {
+    summary.innerHTML = loadingHtml(tab);
   } else if (tab.statusText) {
     summary.innerHTML = emptyHtml(tab.statusText);
   } else {
@@ -265,7 +333,7 @@ function saveActiveDraft() {
   const tab = activeTab();
   if (!tab || !["draft", "job"].includes(tab.type)) return;
   tab.url = urlInput.value.trim();
-  if (tab.type === "draft" && tab.url) tab.title = titleFromUrl(tab.url);
+  if (tab.type === "draft" && tab.url && tab.title === "New Summary") tab.title = titleFromUrl(tab.url);
 }
 
 function renderTabs() {
@@ -275,7 +343,10 @@ function renderTabs() {
     btn.type = "button";
     btn.className = `chrome-tab ${tab.id === state.activeTabId ? "is-active" : ""} ${tab.jobStatus === "running" || tab.jobStatus === "queued" ? "is-running" : ""} ${tab.jobStatus === "failed" || tab.error ? "is-failed" : ""} ${tab.type === "history" ? "is-saved" : ""}`;
     btn.title = tab.title;
-    btn.innerHTML = `<span>${escapeHtml(tab.title)}</span><span class="tab-close" title="Close tab">x</span>`;
+    btn.innerHTML = `
+      <span class="tab-label">${escapeHtml(tab.title)}</span>
+      ${["queued", "running"].includes(tab.jobStatus) ? `<span class="tab-progress"><span style="width:${Math.max(4, Math.min(100, visibleProgress(tab)))}%"></span></span>` : ""}
+      <span class="tab-close" title="Close tab">x</span>`;
     btn.addEventListener("click", () => activateTab(tab.id));
     btn.querySelector(".tab-close").addEventListener("click", (event) => closeTab(tab.id, event));
     chromeTabs.appendChild(btn);
@@ -291,7 +362,7 @@ function renderQueue() {
   queueList.innerHTML = jobs.map((job) => `
     <button class="queue-item" type="button" data-job-id="${job.id}">
       <strong>${escapeHtml(job.title || titleFromUrl(job.url))}</strong>
-      ${escapeHtml(job.status)} · ${escapeHtml(job.message || job.error || "")}
+      ${escapeHtml(job.status)} · ${Math.round(visibleProgress(job))}% · ${escapeHtml(job.message || job.error || "")}${job.tokens_per_second ? ` · ${escapeHtml(job.tokens_per_second)} tok/s` : ""}
     </button>
   `).join("");
   queueList.querySelectorAll("[data-job-id]").forEach((btn) => {
@@ -314,7 +385,11 @@ function updateTabFromJob(job) {
   tab.url = job.url;
   tab.jobStatus = job.status;
   tab.progress = job.progress;
+  if (job.status === "running" && !tab.startedAt) tab.startedAt = Date.now();
   tab.statusText = job.message || "";
+  tab.tokensPerSecond = job.tokens_per_second || tab.tokensPerSecond;
+  tab.completionTokens = job.completion_tokens || tab.completionTokens;
+  tab.elapsedSeconds = job.elapsed_seconds || tab.elapsedSeconds;
   tab.error = job.error || "";
   if (job.summary) {
     tab.markdown = job.summary;
@@ -354,7 +429,7 @@ async function refreshModels() {
       modelStatus.textContent = `🟢 Model loaded: ${data.current_model}`;
       advancedHint.textContent = "Model loaded";
     } else if (data.status === "no_model") {
-      modelStatus.textContent = "🟡 LM Studio is connected. Choose a model and click Load Selected.";
+      modelStatus.textContent = "🟡 LM Studio is connected. Choose a model and click Use This Model.";
       advancedHint.textContent = "Load a model";
       modelStatus.classList.add("warning");
     } else if (data.status === "multiple_models") {
@@ -390,10 +465,10 @@ function updateModelButtons() {
 async function loadSelectedModel() {
   const selected = modelSelect.value;
   try {
-    modelStatus.textContent = "Loading selected model...";
+    modelStatus.textContent = "Loading model into LM Studio...";
     loadModelBtn.disabled = true;
     await requestJson(api.modelLoad, { method: "POST", body: JSON.stringify({ model: selected }) });
-    showToast("Model loaded");
+    showToast("Model ready");
     await refreshModels();
   } catch (error) {
     showError(error.message, "model_load_error");
@@ -406,10 +481,10 @@ async function unloadLoadedModel() {
   const loaded = inventory ? inventory.loaded_models || [] : [];
   const selected = loaded.includes(modelSelect.value) ? modelSelect.value : loaded[0];
   try {
-    modelStatus.textContent = "Unloading model...";
+    modelStatus.textContent = "Stopping current model...";
     unloadModelBtn.disabled = true;
     await requestJson(api.modelUnload, { method: "POST", body: JSON.stringify({ instance_id: selected }) });
-    showToast("Model unloaded");
+    showToast("Model stopped");
     await refreshModels();
   } catch (error) {
     showError(error.message, "model_unload_error");
@@ -449,6 +524,108 @@ async function resetPromptPreset() {
     promptEditor.value = data.prompt;
     promptStatus.textContent = "Reset to built-in default prompt.";
     showToast("Prompt reset");
+  } catch (error) {
+    promptStatus.textContent = error.message;
+  }
+}
+
+async function loadPromptPresets() {
+  try {
+    const data = await requestJson(api.promptPresets);
+    state.promptPresets = data.presets || [];
+    renderPromptPresets();
+  } catch (error) {
+    presetList.innerHTML = `<div class="queue-empty">${escapeHtml(error.message)}</div>`;
+  }
+}
+
+function renderPromptPresets() {
+  if (!state.promptPresets.length) {
+    presetList.innerHTML = '<div class="queue-empty">No saved presets yet.</div>';
+    return;
+  }
+  presetList.innerHTML = state.promptPresets.map((preset) => `
+    <div class="preset-item" data-preset-id="${escapeHtml(preset.id)}">
+      <button class="preset-use" type="button" data-preset-action="use">
+        <strong>${escapeHtml(preset.name || "Prompt preset")}</strong>
+        <span>${preset.is_builtin ? "built in" : "saved locally"}</span>
+      </button>
+      ${preset.is_builtin ? "" : `
+        <button class="preset-icon-action" type="button" data-preset-action="rename" title="Rename preset">Rename</button>
+        <button class="preset-icon-action danger" type="button" data-preset-action="delete" title="Delete preset">Delete</button>
+      `}
+    </div>
+  `).join("");
+  presetList.querySelectorAll("[data-preset-action]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      const item = event.currentTarget.closest("[data-preset-id]");
+      const presetId = item?.dataset.presetId;
+      if (!presetId) return;
+      const action = event.currentTarget.dataset.presetAction;
+      if (action === "use") usePromptPreset(presetId);
+      if (action === "rename") renamePromptPreset(presetId);
+      if (action === "delete") deletePromptPreset(presetId);
+    });
+  });
+}
+
+async function usePromptPreset(presetId) {
+  try {
+    const data = await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}`);
+    promptEditor.value = data.preset.prompt || "";
+    promptStatus.textContent = `Loaded preset: ${data.preset.name || "Prompt preset"}. Click Save as Default to make it your default.`;
+    showToast("Preset loaded");
+  } catch (error) {
+    promptStatus.textContent = error.message;
+  }
+}
+
+async function saveCurrentAsPreset() {
+  const prompt = promptEditor.value.trim();
+  const name = presetNameInput.value.trim();
+  if (!prompt) {
+    promptStatus.textContent = "Prompt cannot be empty.";
+    return;
+  }
+  try {
+    const data = await requestJson(api.promptPresets, {
+      method: "POST",
+      body: JSON.stringify({ name, prompt })
+    });
+    presetNameInput.value = "";
+    promptStatus.textContent = `Saved preset: ${data.preset.name}.`;
+    showToast("Preset saved");
+    await loadPromptPresets();
+  } catch (error) {
+    promptStatus.textContent = error.message;
+  }
+}
+
+async function renamePromptPreset(presetId) {
+  const preset = state.promptPresets.find((item) => item.id === presetId);
+  const name = window.prompt("Rename preset", preset?.name || "");
+  if (name === null) return;
+  try {
+    const data = await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ name })
+    });
+    promptStatus.textContent = `Renamed preset: ${data.preset.name}.`;
+    showToast("Preset renamed");
+    await loadPromptPresets();
+  } catch (error) {
+    promptStatus.textContent = error.message;
+  }
+}
+
+async function deletePromptPreset(presetId) {
+  const preset = state.promptPresets.find((item) => item.id === presetId);
+  if (!window.confirm(`Delete "${preset?.name || "this preset"}"?`)) return;
+  try {
+    await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}`, { method: "DELETE" });
+    promptStatus.textContent = "Preset deleted.";
+    showToast("Preset deleted");
+    await loadPromptPresets();
   } catch (error) {
     promptStatus.textContent = error.message;
   }
@@ -503,28 +680,47 @@ async function summarize() {
   summarizeBtn.disabled = true;
   summarizeBtn.style.opacity = ".72";
   try {
-    const data = await requestJson(api.jobs, {
-      method: "POST",
-      body: JSON.stringify({ urls, model: modelSelect.value })
-    });
-    for (const job of data.jobs || []) {
-      state.jobs.set(job.id, job);
+    status.innerHTML = `Reading video titles<span class="loading-dot"></span>`;
+    const titleMap = await fetchVideoMetadata(urls);
+    const tabMap = {};
+    for (const url of urls) {
       const existingDraft = activeTab();
       const canReuseActive = urls.length === 1 && existingDraft && existingDraft.type === "draft" && !existingDraft.markdown && !existingDraft.jobId;
       const tab = canReuseActive ? existingDraft : createTab({ activate: false });
       tab.type = "job";
-      tab.title = titleFromUrl(job.url);
+      tab.title = titleMap[url] || titleFromUrl(url);
+      tab.url = url;
+      tab.jobStatus = "queued";
+      tab.statusText = "Waiting in queue...";
+      tab.progress = 0;
+      tab.startedAt = 0;
+      tab.tokensPerSecond = null;
+      tab.completionTokens = null;
+      tab.elapsedSeconds = null;
+      tabMap[url] = tab;
+    }
+    activateTab(tabMap[urls[0]].id);
+    const data = await requestJson(api.jobs, {
+      method: "POST",
+      body: JSON.stringify({ urls, model: modelSelect.value, titles: titleMap })
+    });
+    for (const job of data.jobs || []) {
+      state.jobs.set(job.id, job);
+      const tab = tabMap[job.url] || createTab({ activate: false });
+      tab.type = "job";
+      tab.title = job.title || tab.title || titleFromUrl(job.url);
       tab.url = job.url;
       tab.jobId = job.id;
       tab.jobStatus = job.status;
       tab.statusText = job.message;
       tab.progress = job.progress;
+      tab.startedAt = job.status === "running" ? Date.now() : 0;
     }
     if (data.jobs && data.jobs[0]) {
       const first = state.tabs.find((tab) => tab.jobId === data.jobs[0].id);
       if (first) activateTab(first.id);
     }
-    status.innerHTML = `Queued ${data.jobs.length} video${data.jobs.length === 1 ? "" : "s"}<span class="loading-dot"></span>`;
+    status.innerHTML = queueStatusText();
     startPolling();
     showToast("Queue started");
   } catch (error) {
@@ -540,7 +736,7 @@ async function pollJobs() {
   if (!activeJobs.length) {
     clearInterval(state.pollTimer);
     state.pollTimer = null;
-    status.textContent = "";
+    status.textContent = queueStatusText(true);
     return;
   }
   await Promise.all(activeJobs.map(async (job) => {
@@ -550,9 +746,9 @@ async function pollJobs() {
       state.jobs.set(job.id, data.job);
       updateTabFromJob(data.job);
       if (data.job.status === "succeeded" && oldStatus !== "succeeded") {
-        status.textContent = "Done";
+        status.textContent = queueStatusText();
         playFinishAnimation();
-        showToast("Summary ready");
+        showToast(`Done: ${data.job.title || "Summary ready"}`);
       }
     } catch (error) {
       job.status = "failed";
@@ -563,6 +759,20 @@ async function pollJobs() {
   }));
   renderTabs();
   renderQueue();
+  status.textContent = queueStatusText();
+}
+
+function queueStatusText(allowDone = false) {
+  const jobs = [...state.jobs.values()];
+  const active = jobs.filter((job) => ["queued", "running"].includes(job.status));
+  const running = jobs.filter((job) => job.status === "running");
+  const done = jobs.filter((job) => job.status === "succeeded");
+  if (active.length) {
+    const current = running[0] || active[0];
+    return `${done.length}/${jobs.length} done · ${current.status}: ${current.title || titleFromUrl(current.url)}`;
+  }
+  if (allowDone && jobs.length) return `${done.length}/${jobs.length} done`;
+  return "";
 }
 
 function startPolling() {
@@ -651,6 +861,11 @@ speakBtn.addEventListener("click", toggleNarration);
 newTabBtn.addEventListener("click", () => createTab());
 loadModelBtn.addEventListener("click", loadSelectedModel);
 unloadModelBtn.addEventListener("click", unloadLoadedModel);
+viewPresetsBtn.addEventListener("click", async () => {
+  presetDrawer.hidden = !presetDrawer.hidden;
+  if (!presetDrawer.hidden) await loadPromptPresets();
+});
+savePresetBtn.addEventListener("click", saveCurrentAsPreset);
 document.getElementById("savePromptBtn").addEventListener("click", savePromptPreset);
 document.getElementById("resetPromptBtn").addEventListener("click", resetPromptPreset);
 
@@ -667,4 +882,5 @@ applyZoom();
 createGuideTab();
 refreshModels();
 loadPromptPreset();
+loadPromptPresets();
 loadHistoryTabs();
