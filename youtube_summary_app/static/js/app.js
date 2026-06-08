@@ -6,11 +6,14 @@ const api = {
   promptReset: "/api/prompt/reset",
   promptPresets: "/api/prompt/presets",
   videoMetadata: "/api/videos/metadata",
+  chat: "/api/chat",
+  chatStream: "/api/chat/stream",
   jobs: "/api/jobs",
   history: "/api/history"
 };
 
 const layout = document.getElementById("layout");
+const content = document.querySelector(".content");
 const resizer = document.getElementById("resizer");
 const summaryPanel = document.getElementById("summaryPanel");
 const summary = document.getElementById("summary");
@@ -19,6 +22,23 @@ const summarizeBtn = document.getElementById("summarizeBtn");
 const copyBtn = document.getElementById("copyBtn");
 const guideBtn = document.getElementById("guideBtn");
 const speakBtn = document.getElementById("speakBtn");
+const chatBtn = document.getElementById("chatBtn");
+const chatPanel = document.getElementById("chatPanel");
+const chatCloseBtn = document.getElementById("chatCloseBtn");
+const chatMessages = document.getElementById("chatMessages");
+const chatForm = document.getElementById("chatForm");
+const chatInput = document.getElementById("chatInput");
+const chatSendBtn = document.getElementById("chatSendBtn");
+const chatSubtitle = document.getElementById("chatSubtitle");
+const chatFileBtn = document.getElementById("chatFileBtn");
+const chatImageBtn = document.getElementById("chatImageBtn");
+const chatFileInput = document.getElementById("chatFileInput");
+const chatImageInput = document.getElementById("chatImageInput");
+const feedbackText = document.getElementById("feedbackText");
+const sendFeedbackBtn = document.getElementById("sendFeedbackBtn");
+const donationBtn = document.getElementById("donationBtn");
+const zoomInBtn = document.getElementById("zoomInBtn");
+const zoomOutBtn = document.getElementById("zoomOutBtn");
 const toast = document.getElementById("toast");
 const modelSelect = document.getElementById("model");
 const modelStatus = document.getElementById("modelStatus");
@@ -45,9 +65,13 @@ const state = {
   activeTabId: "",
   jobs: new Map(),
   pollTimer: null,
+  progressTimer: null,
   modelInventory: null,
-  promptPresets: []
+  promptPresets: [],
+  chatHistory: new Map()
 };
+
+const attachedFiles = [];
 
 let dragging = false;
 let speechActive = false;
@@ -125,6 +149,41 @@ function markdownToHtml(markdown) {
   return `<pre>${escapeHtml(markdown)}</pre>`;
 }
 
+function cleanSummaryText(markdown = "") {
+  return String(markdown || "")
+    .replace(/^Source:\s+\S+\s*/gim, "")
+    .replace(/^Model:\s+.+\s*/gim, "")
+    .trim();
+}
+
+function chatKeyForTab(tab = activeTab()) {
+  return tab?.historyId || "";
+}
+
+function selectedModelSupportsUploads() {
+  const selected = modelSelect.value;
+  const models = state.modelInventory?.models || [];
+  const model = models.find((item) => item.key === selected) || {};
+  const label = `${selected} ${model.display_name || ""}`.toLowerCase();
+  return /\b(vl|vision|visual|llava|bakllava|moondream|pixtral|qwen2-vl|qwen-vl|gemma-3|gemma 3|oss|gpt-oss)\b/.test(label);
+}
+
+function updateChatUploadControls() {
+  const enabled = selectedModelSupportsUploads();
+  for (const button of [chatFileBtn, chatImageBtn]) {
+    button.disabled = !enabled;
+  }
+  const label = enabled ? "Upload available for this model" : "Upload unavailable for this model";
+  chatFileBtn.title = label;
+  chatImageBtn.title = label;
+}
+
+function setZoom(nextZoom) {
+  userZoom = Math.max(.72, Math.min(1.65, nextZoom));
+  applyZoom();
+  showToast(`Zoom ${Math.round(userZoom * 100)}%`);
+}
+
 function parseUrls(value = urlInput.value) {
   const matches = value.match(/https?:\/\/[^\s,]+/g) || [];
   return [...new Set(matches.map((url) => url.trim()))];
@@ -164,24 +223,58 @@ function setProgress(percent, visible) {
 function visibleProgress(tab) {
   if (!tab) return 0;
   const raw = Number(tab.progress) || 0;
-  if (tab.jobStatus === "running") {
+  const statusName = tab.jobStatus || tab.status;
+  if (statusName === "running") {
     const age = Math.max(0, Date.now() - (tab.startedAt || Date.now()));
     const eased = 88 * (1 - Math.exp(-age / 9500));
     return Math.max(raw, Math.min(88, eased));
   }
-  if (tab.jobStatus === "queued") return Math.max(raw, 6);
+  if (statusName === "queued") return Math.max(raw, 6);
   return raw;
 }
 
 function progressMeta(tab) {
   if (!tab) return "";
+  const statusName = tab.jobStatus || tab.status;
   const pieces = [];
-  if (tab.jobStatus === "queued") pieces.push("Queued");
-  if (tab.jobStatus === "running") pieces.push(tab.statusText || "Generating summary");
-  if (tab.jobStatus === "succeeded") pieces.push("Done");
-  if (tab.jobStatus === "failed") pieces.push("Failed");
-  if (tab.tokensPerSecond) pieces.push(`${tab.tokensPerSecond} tok/s`);
+  if (statusName === "queued") pieces.push("Queued");
+  if (statusName === "running") pieces.push(tab.statusText || tab.message || "Generating summary");
+  if (statusName === "succeeded") pieces.push("Done");
+  if (statusName === "failed") pieces.push("Failed");
+  if (tab.tokensPerSecond || tab.tokens_per_second) pieces.push(`${tab.tokensPerSecond || tab.tokens_per_second} tok/s`);
   return pieces.join(" · ");
+}
+
+function updateProgressViews() {
+  const tab = activeTab();
+  const show = tab && ["queued", "running"].includes(tab.jobStatus);
+  if (show) {
+    const percent = visibleProgress(tab);
+    setProgress(percent, true);
+    const loadingBar = summary.querySelector(".summary-loading__bar span");
+    const loadingPercent = summary.querySelector(".summary-loading__top span");
+    const loadingMeta = summary.querySelector(".summary-loading__meta");
+    if (loadingBar) loadingBar.style.width = `${Math.max(5, Math.min(100, percent))}%`;
+    if (loadingPercent) loadingPercent.textContent = `${Math.round(percent)}%`;
+    if (loadingMeta) loadingMeta.textContent = progressMeta(tab) || "Queued";
+  } else {
+    setProgress(0, false);
+  }
+  chromeTabs.querySelectorAll("[data-tab-id]").forEach((button) => {
+    const item = state.tabs.find((candidate) => candidate.id === button.dataset.tabId);
+    const bar = button.querySelector(".tab-progress span");
+    if (item && bar) bar.style.width = `${Math.max(4, Math.min(100, visibleProgress(item)))}%`;
+  });
+}
+
+function startProgressTicker() {
+  if (state.progressTimer) return;
+  const tick = () => {
+    updateProgressViews();
+    const hasActiveProgress = state.tabs.some((tab) => ["queued", "running"].includes(tab.jobStatus));
+    state.progressTimer = hasActiveProgress ? requestAnimationFrame(tick) : null;
+  };
+  state.progressTimer = requestAnimationFrame(tick);
 }
 
 function guideHtml() {
@@ -294,7 +387,7 @@ function activateTab(tabId) {
   } else if (tab.error) {
     summary.innerHTML = `<div class="error-card"><strong>Something needs attention.</strong><br>${escapeHtml(tab.error)}</div>`;
   } else if (tab.markdown) {
-    summary.innerHTML = markdownToHtml(tab.markdown);
+    summary.innerHTML = markdownToHtml(cleanSummaryText(tab.markdown));
   } else if (["queued", "running"].includes(tab.jobStatus)) {
     summary.innerHTML = loadingHtml(tab);
   } else if (tab.statusText) {
@@ -304,6 +397,10 @@ function activateTab(tabId) {
   }
   renderTabs();
   renderQueue();
+  updateProgressViews();
+  if (!chatPanel.hidden) {
+    loadChatMemory(tab).finally(renderChatMessages);
+  }
 }
 
 function closeTab(tabId, event) {
@@ -341,6 +438,7 @@ function renderTabs() {
   for (const tab of state.tabs) {
     const btn = document.createElement("button");
     btn.type = "button";
+    btn.dataset.tabId = tab.id;
     btn.className = `chrome-tab ${tab.id === state.activeTabId ? "is-active" : ""} ${tab.jobStatus === "running" || tab.jobStatus === "queued" ? "is-running" : ""} ${tab.jobStatus === "failed" || tab.error ? "is-failed" : ""} ${tab.type === "history" ? "is-saved" : ""}`;
     btn.title = tab.title;
     btn.innerHTML = `
@@ -392,7 +490,7 @@ function updateTabFromJob(job) {
   tab.elapsedSeconds = job.elapsed_seconds || tab.elapsedSeconds;
   tab.error = job.error || "";
   if (job.summary) {
-    tab.markdown = job.summary;
+    tab.markdown = cleanSummaryText(job.summary);
     tab.type = "history";
     tab.historyId = job.history_id || tab.historyId;
   }
@@ -460,6 +558,7 @@ function updateModelButtons() {
   summarizeBtn.disabled = !(inventory && inventory.ok);
   loadModelBtn.disabled = !selected || selectedLoaded || loaded.length > 0 || !inventory || inventory.source !== "native_v1";
   unloadModelBtn.disabled = !inventory || !loaded.length || inventory.source !== "native_v1";
+  updateChatUploadControls();
 }
 
 async function loadSelectedModel() {
@@ -606,8 +705,8 @@ async function renamePromptPreset(presetId) {
   const name = window.prompt("Rename preset", preset?.name || "");
   if (name === null) return;
   try {
-    const data = await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}`, {
-      method: "PUT",
+    const data = await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}/rename`, {
+      method: "POST",
       body: JSON.stringify({ name })
     });
     promptStatus.textContent = `Renamed preset: ${data.preset.name}.`;
@@ -622,7 +721,7 @@ async function deletePromptPreset(presetId) {
   const preset = state.promptPresets.find((item) => item.id === presetId);
   if (!window.confirm(`Delete "${preset?.name || "this preset"}"?`)) return;
   try {
-    await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}`, { method: "DELETE" });
+    await requestJson(`${api.promptPresets}/${encodeURIComponent(presetId)}/delete`, { method: "POST" });
     promptStatus.textContent = "Preset deleted.";
     showToast("Preset deleted");
     await loadPromptPresets();
@@ -661,7 +760,7 @@ async function loadHistoryItem(tab) {
     const data = await requestJson(`${api.history}/${encodeURIComponent(tab.historyId)}`);
     const item = data.item;
     tab.title = item.title || tab.title;
-    tab.markdown = item.summary || item.markdown || "";
+    tab.markdown = cleanSummaryText(item.summary || item.markdown || "");
     tab.url = item.url || tab.url;
     tab.statusText = "";
   } catch (error) {
@@ -776,13 +875,14 @@ function queueStatusText(allowDone = false) {
 }
 
 function startPolling() {
-  if (!state.pollTimer) state.pollTimer = setInterval(pollJobs, 1400);
+  if (!state.pollTimer) state.pollTimer = setInterval(pollJobs, 700);
+  startProgressTicker();
   pollJobs();
 }
 
 async function copyResult() {
   const tab = activeTab();
-  const text = tab?.markdown || summary.innerText;
+  const text = cleanSummaryText(tab?.markdown || summary.innerText);
   if (!text.trim()) return;
   try {
     await navigator.clipboard.writeText(text);
@@ -792,6 +892,138 @@ async function copyResult() {
   } catch {
     showToast("Copy failed");
   }
+}
+
+function renderChatMessages() {
+  const tab = activeTab();
+  const key = chatKeyForTab(tab) || tab?.id || "";
+  const messages = state.chatHistory.get(key) || [];
+  chatMessages.innerHTML = messages.length ? messages.map((message) => `
+    <div class="chat-message ${message.role === "user" ? "user" : "assistant"} ${message.pending ? "thinking" : ""}">${escapeHtml(message.content)}</div>
+  `).join("") : '<div class="chat-message">Ask a question about the current summary.</div>';
+  if (chatSubtitle) chatSubtitle.textContent = tab?.title || "Ask about this summary";
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+async function loadChatMemory(tab = activeTab()) {
+  const key = chatKeyForTab(tab);
+  if (!key || state.chatHistory.has(key)) return;
+  try {
+    const data = await requestJson(`/api/chat/history/${encodeURIComponent(key)}`);
+    state.chatHistory.set(key, data.messages || []);
+  } catch {
+    state.chatHistory.set(key, []);
+  }
+}
+
+async function toggleChatPanel(forceOpen = null) {
+  const shouldOpen = forceOpen === null ? chatPanel.hidden : forceOpen;
+  chatPanel.hidden = !shouldOpen;
+  content.classList.toggle("chat-open", shouldOpen);
+  if (shouldOpen) {
+    await loadChatMemory();
+    renderChatMessages();
+    chatInput.focus();
+  }
+}
+
+async function sendChatMessage(event) {
+  event.preventDefault();
+  const tab = activeTab();
+  const summaryText = cleanSummaryText(tab?.markdown || summary.innerText);
+  const question = chatInput.value.trim();
+  if (!question) return;
+  if (!summaryText || ["queued", "running"].includes(tab?.jobStatus)) {
+    showToast("Wait for the summary first");
+    return;
+  }
+  const key = chatKeyForTab(tab) || tab.id;
+  const messages = state.chatHistory.get(key) || [];
+  messages.push({ role: "user", content: question });
+  messages.push({ role: "assistant", content: "Thinking…", pending: true });
+  state.chatHistory.set(key, messages);
+  chatInput.value = "";
+  chatSendBtn.disabled = true;
+  renderChatMessages();
+  try {
+    const attachmentNote = attachedFiles.length ? `\n\nAttached files selected in the app:\n${attachedFiles.map((file) => `- ${file.name}`).join("\n")}` : "";
+    const response = await fetch(api.chatStream, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ summary: summaryText, question: `${question}${attachmentNote}`, model: modelSelect.value, history_id: chatKeyForTab(tab) })
+    });
+    if (!response.ok || !response.body) throw new Error("Chat stream failed.");
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let answer = "";
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() || "";
+      for (const eventText of events) {
+        const line = eventText.split("\n").find((item) => item.startsWith("data: "));
+        if (!line) continue;
+        const eventData = JSON.parse(line.slice(6));
+        if (eventData.error) throw new Error(eventData.error);
+        if (eventData.delta) {
+          answer += eventData.delta;
+          const nextMessages = messages.filter((message) => !message.pending);
+          nextMessages.push({ role: "assistant", content: answer || "Thinking…", pending: !answer });
+          state.chatHistory.set(key, nextMessages);
+          renderChatMessages();
+        }
+        if (eventData.done) {
+          const nextMessages = eventData.messages?.length ? eventData.messages : [
+            ...messages.filter((message) => !message.pending),
+            { role: "assistant", content: eventData.answer || answer }
+          ];
+          state.chatHistory.set(key, nextMessages);
+        }
+      }
+    }
+  } catch (error) {
+    const nextMessages = messages.filter((message) => !message.pending);
+    nextMessages.push({ role: "assistant", content: error.message });
+    state.chatHistory.set(key, nextMessages);
+  } finally {
+    chatSendBtn.disabled = false;
+    renderChatMessages();
+  }
+}
+
+function sendFeedback() {
+  const body = feedbackText.value.trim();
+  const subject = encodeURIComponent("YouTube Summary App Feedback");
+  const encodedBody = encodeURIComponent(body || "I want to share feedback about YouTube Summary App.");
+  window.location.href = `mailto:peiliangkrausse@gmail.com?subject=${subject}&body=${encodedBody}`;
+}
+
+function celebrateDonation() {
+  summaryPanel.classList.remove("donation-celebrate");
+  void summaryPanel.offsetWidth;
+  summaryPanel.classList.add("donation-celebrate");
+  showToast("Thank you for supporting the app");
+  setTimeout(() => summaryPanel.classList.remove("donation-celebrate"), 1800);
+}
+
+function openDonation() {
+  celebrateDonation();
+  const donationUrl = donationBtn.dataset.url || "";
+  if (donationUrl) setTimeout(() => window.open(donationUrl, "_blank", "noopener"), 650);
+}
+
+function attachChatFile(file) {
+  if (!file) return;
+  attachedFiles.push({ name: file.name, type: file.type || "file", size: file.size || 0 });
+  showToast(`Attached ${file.name}`);
+  const key = chatKeyForTab() || activeTab()?.id || "";
+  const messages = state.chatHistory.get(key) || [];
+  messages.push({ role: "assistant", content: `Attached: ${file.name}` });
+  state.chatHistory.set(key, messages);
+  renderChatMessages();
 }
 
 function toggleNarration() {
@@ -823,19 +1055,13 @@ function handleZoom(event) {
   const key = event.key.toLowerCase();
   if (key === "+" || key === "=" || event.code === "Equal" || event.code === "NumpadAdd") {
     event.preventDefault();
-    userZoom = Math.min(1.65, userZoom + .08);
-    applyZoom();
-    showToast(`Zoom ${Math.round(userZoom * 100)}%`);
+    setZoom(userZoom + .08);
   } else if (key === "-" || key === "_" || event.code === "Minus" || event.code === "NumpadSubtract") {
     event.preventDefault();
-    userZoom = Math.max(.72, userZoom - .08);
-    applyZoom();
-    showToast(`Zoom ${Math.round(userZoom * 100)}%`);
+    setZoom(userZoom - .08);
   } else if (key === "0" || event.code === "Digit0" || event.code === "Numpad0") {
     event.preventDefault();
-    userZoom = 1;
-    applyZoom();
-    showToast("Zoom reset");
+    setZoom(1);
   } else if (key === "n") {
     event.preventDefault();
     createTab();
@@ -858,6 +1084,17 @@ summarizeBtn.addEventListener("click", summarize);
 copyBtn.addEventListener("click", copyResult);
 guideBtn.addEventListener("click", createGuideTab);
 speakBtn.addEventListener("click", toggleNarration);
+chatBtn.addEventListener("click", () => toggleChatPanel(true));
+chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
+chatForm.addEventListener("submit", sendChatMessage);
+sendFeedbackBtn.addEventListener("click", sendFeedback);
+donationBtn.addEventListener("click", openDonation);
+zoomInBtn.addEventListener("click", () => setZoom(userZoom + .08));
+zoomOutBtn.addEventListener("click", () => setZoom(userZoom - .08));
+chatFileBtn.addEventListener("click", () => chatFileInput.click());
+chatImageBtn.addEventListener("click", () => chatImageInput.click());
+chatFileInput.addEventListener("change", () => attachChatFile(chatFileInput.files[0]));
+chatImageInput.addEventListener("change", () => attachChatFile(chatImageInput.files[0]));
 newTabBtn.addEventListener("click", () => createTab());
 loadModelBtn.addEventListener("click", loadSelectedModel);
 unloadModelBtn.addEventListener("click", unloadLoadedModel);

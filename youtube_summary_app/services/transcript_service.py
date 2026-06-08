@@ -4,6 +4,7 @@ import subprocess
 from urllib.parse import quote_plus
 
 import requests
+import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 
 from youtube_summary_app.config import MAX_TRANSCRIPT_WORDS, SUPPORTED_TRANSCRIPT_LANGUAGES
@@ -27,11 +28,78 @@ class TranscriptService:
 
     def fetch_metadata(self, url: str) -> dict:
         video_id = self.extract_video_id(url)
+        canonical_url = f"https://www.youtube.com/watch?v={video_id}"
         fallback = {
             "video_id": video_id,
             "url": url.strip(),
             "title": f"YouTube video {video_id}",
         }
+        try:
+            with yt_dlp.YoutubeDL({
+                "quiet": True,
+                "no_warnings": True,
+                "skip_download": True,
+                "noplaylist": True,
+                "extractor_retries": 0,
+            }) as downloader:
+                payload = downloader.extract_info(canonical_url, download=False)
+            title = payload.get("title") if isinstance(payload, dict) else ""
+            if isinstance(title, str) and title.strip():
+                return {
+                    "video_id": video_id,
+                    "url": url.strip(),
+                    "title": title.strip(),
+                    "channel": payload.get("channel") if isinstance(payload, dict) else "",
+                    "duration": payload.get("duration") if isinstance(payload, dict) else None,
+                }
+        except Exception:
+            pass
+
+        try:
+            response = requests.get(
+                f"https://www.youtube.com/oembed?url={quote_plus(canonical_url)}&format=json",
+                timeout=8,
+            )
+            if response.ok:
+                payload = response.json()
+                title = payload.get("title", "")
+                if isinstance(title, str) and title.strip():
+                    return {
+                        **fallback,
+                        "title": title.strip(),
+                        "channel": payload.get("author_name", ""),
+                    }
+        except Exception:
+            pass
+
+        try:
+            response = requests.get(
+                f"https://noembed.com/embed?url={quote_plus(canonical_url)}",
+                timeout=8,
+            )
+            if response.ok:
+                payload = response.json()
+                title = payload.get("title", "")
+                if isinstance(title, str) and title.strip():
+                    return {
+                        **fallback,
+                        "title": title.strip(),
+                        "channel": payload.get("author_name", ""),
+                    }
+        except Exception:
+            pass
+
+        try:
+            response = requests.get(canonical_url, timeout=8)
+            if response.ok:
+                match = re.search(r"<title>(.*?)</title>", response.text, re.IGNORECASE | re.DOTALL)
+                if match:
+                    title = re.sub(r"\s+", " ", match.group(1)).replace(" - YouTube", "").strip()
+                    if title:
+                        return {**fallback, "title": title}
+        except Exception:
+            pass
+
         command = [
             "yt-dlp",
             "--skip-download",
@@ -58,23 +126,6 @@ class TranscriptService:
                 "channel": payload.get("channel") if isinstance(payload, dict) else "",
                 "duration": payload.get("duration") if isinstance(payload, dict) else None,
             }
-        except Exception:
-            pass
-
-        try:
-            response = requests.get(
-                f"https://www.youtube.com/oembed?url={quote_plus(url.strip())}&format=json",
-                timeout=8,
-            )
-            if response.ok:
-                payload = response.json()
-                title = payload.get("title", "")
-                if isinstance(title, str) and title.strip():
-                    return {
-                        **fallback,
-                        "title": title.strip(),
-                        "channel": payload.get("author_name", ""),
-                    }
         except Exception:
             pass
 

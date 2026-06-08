@@ -1,4 +1,5 @@
 import time
+import json
 
 import requests
 
@@ -303,3 +304,109 @@ class LMStudioClient:
             }
         except Exception as exc:
             raise ModelError("LM Studio returned an unexpected response format.") from exc
+
+    def chat(self, *, summary: str, question: str, model: str | None = None) -> str:
+        cleaned_summary = (summary or "").strip()
+        cleaned_question = (question or "").strip()
+        if not cleaned_question:
+            raise ModelError("Type a question first.", "missing_chat_question", 400)
+        resolved_model = self.resolve_model(model)
+        try:
+            response = requests.post(
+                f"{self.base_url}/chat/completions",
+                json={
+                    "model": resolved_model,
+                    "messages": [
+                        {
+                            "role": "system",
+                            "content": "Answer questions about the provided YouTube summary. Be clear, concise, and stay grounded in the summary when possible.",
+                        },
+                        {
+                            "role": "user",
+                            "content": f"Summary:\n{cleaned_summary}\n\nQuestion:\n{cleaned_question}",
+                        },
+                    ],
+                    "temperature": 0.3,
+                    "max_tokens": 900,
+                },
+                timeout=120,
+            )
+        except requests.exceptions.ConnectionError as exc:
+            raise ModelError(
+                "Cannot connect to LM Studio. Open LM Studio, start the local server, and confirm it uses port 1234.",
+                "model_disconnected",
+            ) from exc
+        except requests.exceptions.Timeout as exc:
+            raise ModelError("LM Studio took too long to answer.", "model_timeout") from exc
+        except Exception as exc:
+            raise ModelError(f"LM Studio error: {exc}") from exc
+
+        if not response.ok:
+            try:
+                payload = response.json()
+                error_message = str(payload.get("error", payload))
+            except Exception:
+                error_message = response.text
+            raise ModelError(f"LM Studio error: {error_message}")
+
+        try:
+            payload = response.json()
+            return payload["choices"][0]["message"]["content"].strip()
+        except Exception as exc:
+            raise ModelError("LM Studio returned an unexpected response format.") from exc
+
+    def chat_payload(self, *, summary: str, question: str, model: str | None = None, stream: bool = False) -> dict:
+        cleaned_summary = (summary or "").strip()
+        cleaned_question = (question or "").strip()
+        if not cleaned_question:
+            raise ModelError("Type a question first.", "missing_chat_question", 400)
+        return {
+            "model": self.resolve_model(model),
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "Answer questions about the provided YouTube summary. Be clear, concise, and stay grounded in the summary when possible.",
+                },
+                {
+                    "role": "user",
+                    "content": f"Summary:\n{cleaned_summary}\n\nQuestion:\n{cleaned_question}",
+                },
+            ],
+            "temperature": 0.3,
+            "max_tokens": 900,
+            "stream": stream,
+        }
+
+    def stream_chat(self, *, summary: str, question: str, model: str | None = None):
+        payload = self.chat_payload(summary=summary, question=question, model=model, stream=True)
+        try:
+            with requests.post(
+                f"{self.base_url}/chat/completions",
+                json=payload,
+                timeout=120,
+                stream=True,
+            ) as response:
+                if not response.ok:
+                    raise ModelError(f"LM Studio error: {response.text}")
+                for line in response.iter_lines(decode_unicode=True):
+                    if not line:
+                        continue
+                    if line.startswith("data: "):
+                        line = line[6:]
+                    if line.strip() == "[DONE]":
+                        break
+                    try:
+                        event = json.loads(line)
+                    except json.JSONDecodeError:
+                        continue
+                    delta = event.get("choices", [{}])[0].get("delta", {})
+                    content = delta.get("content", "")
+                    if content:
+                        yield content
+        except requests.exceptions.ConnectionError as exc:
+            raise ModelError(
+                "Cannot connect to LM Studio. Open LM Studio, start the local server, and confirm it uses port 1234.",
+                "model_disconnected",
+            ) from exc
+        except requests.exceptions.Timeout as exc:
+            raise ModelError("LM Studio took too long to answer.", "model_timeout") from exc

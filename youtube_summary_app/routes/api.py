@@ -1,4 +1,6 @@
-from flask import Blueprint, current_app, jsonify, request
+import json
+
+from flask import Blueprint, Response, current_app, jsonify, request, stream_with_context
 
 from youtube_summary_app.errors import AppError
 from youtube_summary_app.services.job_queue import serialize_job
@@ -110,6 +112,11 @@ def rename_prompt_preset(preset_id):
         return _json_error(AppError(f"Could not rename prompt preset: {exc}", "prompt_preset_rename_error", 400))
 
 
+@api_bp.route("/prompt/presets/<preset_id>/rename", methods=["POST"])
+def rename_prompt_preset_post(preset_id):
+    return rename_prompt_preset(preset_id)
+
+
 @api_bp.route("/prompt/presets/<preset_id>", methods=["DELETE"])
 def delete_prompt_preset(preset_id):
     try:
@@ -119,6 +126,11 @@ def delete_prompt_preset(preset_id):
         return jsonify({"ok": False, "error": "Prompt preset not found.", "error_type": "not_found"}), 404
     except Exception as exc:
         return _json_error(AppError(f"Could not delete prompt preset: {exc}", "prompt_preset_delete_error", 400))
+
+
+@api_bp.route("/prompt/presets/<preset_id>/delete", methods=["POST"])
+def delete_prompt_preset_post(preset_id):
+    return delete_prompt_preset(preset_id)
 
 
 @api_bp.route("/videos/metadata", methods=["POST"])
@@ -135,6 +147,55 @@ def video_metadata():
         except Exception:
             items.append({"url": url, "title": "New Summary"})
     return jsonify({"ok": True, "items": items})
+
+
+@api_bp.route("/chat", methods=["POST"])
+def chat():
+    try:
+        payload = request.json or {}
+        question = payload.get("question", "")
+        answer = current_app.services["lm_studio"].chat(
+            summary=payload.get("summary", ""),
+            question=question,
+            model=payload.get("model", ""),
+        )
+        history_id = payload.get("history_id", "")
+        messages = current_app.services["chat_store"].append_pair(history_id, question, answer) if history_id else []
+        return jsonify({"ok": True, "answer": answer, "messages": messages})
+    except Exception as exc:
+        return _json_error(exc)
+
+
+@api_bp.route("/chat/history/<history_id>")
+def chat_history(history_id):
+    messages = current_app.services["chat_store"].load(history_id)
+    return jsonify({"ok": True, "messages": messages})
+
+
+@api_bp.route("/chat/stream", methods=["POST"])
+def chat_stream():
+    payload = request.json or {}
+    question = payload.get("question", "")
+    history_id = payload.get("history_id", "")
+
+    def generate():
+        answer_parts = []
+        try:
+            for chunk in current_app.services["lm_studio"].stream_chat(
+                summary=payload.get("summary", ""),
+                question=question,
+                model=payload.get("model", ""),
+            ):
+                answer_parts.append(chunk)
+                yield f"data: {json.dumps({'delta': chunk})}\n\n"
+            answer = "".join(answer_parts)
+            messages = current_app.services["chat_store"].append_pair(history_id, question, answer) if history_id else []
+            yield f"data: {json.dumps({'done': True, 'answer': answer, 'messages': messages})}\n\n"
+        except Exception as exc:
+            message = exc.message if isinstance(exc, AppError) else str(exc)
+            yield f"data: {json.dumps({'error': message})}\n\n"
+
+    return Response(stream_with_context(generate()), mimetype="text/event-stream")
 
 
 @api_bp.route("/jobs", methods=["POST"])

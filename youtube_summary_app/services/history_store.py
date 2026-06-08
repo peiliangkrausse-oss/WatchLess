@@ -37,8 +37,6 @@ class HistoryStore:
                 f'created_at: "{created_at}"\n'
                 "---\n\n"
                 f"# {safe_title}\n\n"
-                f"Source: {url}\n\n"
-                f"Model: {model}\n\n"
                 f"{summary.strip()}\n"
             )
             path.write_text(content, encoding="utf-8")
@@ -67,7 +65,10 @@ class HistoryStore:
             raise FileNotFoundError("History item not found.")
         item = self._item_from_file(path)
         item["markdown"] = path.read_text(encoding="utf-8")
-        item["summary"] = re.sub(r"^---.*?---\s*", "", item["markdown"], flags=re.DOTALL).strip()
+        summary = re.sub(r"^---.*?---\s*", "", item["markdown"], flags=re.DOTALL).strip()
+        summary = re.sub(r"\n*Source:\s+\S+\s*", "\n", summary)
+        summary = re.sub(r"\n*Model:\s+.+\s*", "\n", summary)
+        item["summary"] = summary.strip()
         return item
 
     def _item_from_file(self, path: Path) -> dict:
