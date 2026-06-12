@@ -37,38 +37,51 @@
         <select id="model">
           <option value="">Auto-detect loaded model</option>
         </select>
+        <div class="port-row">
+          <input id="lmStudioPort" inputmode="numeric" aria-label="LM Studio port" value="1234">
+          <button type="button" id="testConnectionBtn">Test Connection</button>
+        </div>
         <div class="model-status" id="modelStatus">Checking LM Studio model...</div>
         <div class="model-actions">
-          <button type="button" id="loadModelBtn">Use This Model</button>
-          <button type="button" class="model-stop-action" id="unloadModelBtn">Stop Current Model</button>
+          <button type="button" id="loadModelBtn">Load model</button>
+          <button type="button" class="model-stop-action" id="unloadModelBtn">Unload model</button>
         </div>
         <div class="model-disclaimer">Keep only one model loaded at a time. Loading two large models can overload RAM and crash or freeze smaller laptops.</div>
 
-        <div class="advanced-section" id="promptPresetSection">
-          <div class="prompt-preset-banner">
-            Prompt Preset Editor
-            <span>Edit the system instruction below, then save it as your default summarization prompt.</span>
-          </div>
-          <div class="advanced-title">
-            <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h16M4 19h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-            Prompt Preset
-            <button class="mini-action" type="button" id="viewPresetsBtn">View Presets</button>
-          </div>
-          <div class="preset-drawer" id="presetDrawer" hidden>
-            <div class="preset-save-row">
-              <input id="presetNameInput" placeholder="Preset name, e.g. Study Notes" autocomplete="off">
-              <button type="button" id="savePresetBtn">Save Preset</button>
+        <details class="advanced-section prompt-preset-section" id="promptPresetSection">
+          <summary class="prompt-preset-summary">
+            <span class="advanced-title">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M4 5h16M4 12h16M4 19h10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              Prompt Preset
+            </span>
+            <span class="summary-hint">Edit default prompt</span>
+          </summary>
+          <div class="prompt-preset-body">
+            <div class="prompt-preset-banner">
+              Prompt Preset Editor
+              <span>Edit the system instruction below, then save it as your default summarization prompt.</span>
             </div>
-            <div class="preset-list" id="presetList"></div>
+            <div class="advanced-title">
+              <svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v14H5zM8 9h8M8 13h5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              Saved Presets
+              <button class="mini-action" type="button" id="viewPresetsBtn">View Presets</button>
+            </div>
+            <div class="preset-drawer" id="presetDrawer" hidden>
+              <div class="preset-save-row">
+                <input id="presetNameInput" placeholder="Preset name, e.g. Study Notes" autocomplete="off">
+                <button type="button" id="savePresetBtn">Save Preset</button>
+              </div>
+              <div class="preset-list" id="presetList"></div>
+            </div>
+            <textarea id="promptEditor" spellcheck="true" placeholder="Loading your summarization prompt..."></textarea>
+            <div class="prompt-actions">
+              <button type="button" id="savePromptBtn">Save as Default</button>
+              <button type="button" class="secondary-action" id="resetPromptBtn">Reset Default</button>
+            </div>
+            <div class="prompt-status" id="promptStatus">Loading prompt preset...</div>
+            <div class="prompt-note">This prompt is sent as the system instruction every time you summarize. Saving it here makes it your new default.</div>
           </div>
-          <textarea id="promptEditor" spellcheck="true" placeholder="Loading your summarization prompt..."></textarea>
-          <div class="prompt-actions">
-            <button type="button" id="savePromptBtn">Save as Default</button>
-            <button type="button" class="secondary-action" id="resetPromptBtn">Reset Default</button>
-          </div>
-          <div class="prompt-status" id="promptStatus">Loading prompt preset...</div>
-          <div class="prompt-note">This prompt is sent as the system instruction every time you summarize. Saving it here makes it your new default.</div>
-        </div>
+        </details>
 
         <div class="advanced-section" id="queueSection">
           <div class="advanced-title">
@@ -86,15 +99,21 @@
     </button>
     <div id="status"></div>
     <div class="tip"><strong>Setup:</strong> Open LM Studio, load exactly one model, start the local server on <strong>port 1234</strong>, then summarize.</div>
-    <section class="feedback-section">
+    <section class="support-section feedback-section">
+      <p class="feedback-direct">Write your feedback, bugs, or feature wishes to</p>
+      <button class="feedback-email-btn" id="feedbackEmailBtn" type="button" data-email="{{ feedback_email }}" aria-label="Copy feedback email address">
+        <span>{{ feedback_email }}</span>
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M8 8h10v12H8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 16H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </section>
+
+    <section class="support-section donation-section">
       <div class="advanced-title">
-        <svg viewBox="0 0 24 24" fill="none"><path d="M5 5h14v10H8l-3 3V5Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9 9h6M9 12h4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
-        Send Feedback
+        <svg viewBox="0 0 24 24" fill="none"><path d="M12 21s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.6-7 10-7 10Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+        Donation
       </div>
-      <p>Send bugs, feedback, or feature wishes. Your message opens in your default email app.</p>
-      <textarea id="feedbackText" placeholder="Write your feedback here..."></textarea>
-      <button type="button" id="sendFeedbackBtn">Open Email</button>
-      <button type="button" class="donation-btn" id="donationBtn" data-url="{{ donation_url }}">Donate</button>
+      <p>Support future fixes and improvements. The button opens Ko-fi in your browser.</p>
+      <button type="button" class="donation-btn" id="donationBtn" data-url="{{ donation_url }}" {% if not donation_url %}disabled{% endif %}>buy me a coffee &lt;3</button>
     </section>
   </aside>
 

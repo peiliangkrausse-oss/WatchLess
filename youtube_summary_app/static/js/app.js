@@ -6,6 +6,7 @@ const api = {
   promptReset: "/api/prompt/reset",
   promptPresets: "/api/prompt/presets",
   videoMetadata: "/api/videos/metadata",
+  donation: "/api/support/donation",
   chat: "/api/chat",
   chatStream: "/api/chat/stream",
   jobs: "/api/jobs",
@@ -34,13 +35,14 @@ const chatFileBtn = document.getElementById("chatFileBtn");
 const chatImageBtn = document.getElementById("chatImageBtn");
 const chatFileInput = document.getElementById("chatFileInput");
 const chatImageInput = document.getElementById("chatImageInput");
-const feedbackText = document.getElementById("feedbackText");
-const sendFeedbackBtn = document.getElementById("sendFeedbackBtn");
 const donationBtn = document.getElementById("donationBtn");
+const feedbackEmailBtn = document.getElementById("feedbackEmailBtn");
 const zoomInBtn = document.getElementById("zoomInBtn");
 const zoomOutBtn = document.getElementById("zoomOutBtn");
 const toast = document.getElementById("toast");
 const modelSelect = document.getElementById("model");
+const lmStudioPortInput = document.getElementById("lmStudioPort");
+const testConnectionBtn = document.getElementById("testConnectionBtn");
 const modelStatus = document.getElementById("modelStatus");
 const loadModelBtn = document.getElementById("loadModelBtn");
 const unloadModelBtn = document.getElementById("unloadModelBtn");
@@ -72,10 +74,16 @@ const state = {
 };
 
 const attachedFiles = [];
+const moduleState = {
+  readEventStream: null,
+  formatFileLabel: null,
+  text: null,
+  guideHtml: null
+};
 
 let dragging = false;
 let speechActive = false;
-let userZoom = Number(localStorage.getItem("ytUserZoom")) || 1;
+let summaryZoom = Number(localStorage.getItem("ytSummaryZoom")) || 1;
 
 function uid(prefix) {
   return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 7)}`;
@@ -86,8 +94,11 @@ function activeTab() {
 }
 
 function applyZoom() {
-  document.documentElement.style.setProperty("--user-zoom", userZoom.toFixed(2));
-  localStorage.setItem("ytUserZoom", userZoom.toFixed(2));
+  document.documentElement.style.setProperty("--summary-zoom", summaryZoom.toFixed(2));
+  localStorage.setItem("ytSummaryZoom", summaryZoom.toFixed(2));
+  const zoomLabel = `${Math.round(summaryZoom * 100)}%`;
+  if (zoomInBtn) zoomInBtn.title = `Zoom in (${zoomLabel})`;
+  if (zoomOutBtn) zoomOutBtn.title = `Zoom out (${zoomLabel})`;
 }
 
 function showToast(message) {
@@ -135,7 +146,21 @@ async function requestJson(url, options = {}) {
   return data;
 }
 
+async function loadFrontendModules() {
+  const [streamModule, fileModule, textModule, guideModule] = await Promise.all([
+    import("/static/js/modules/stream_reader.js"),
+    import("/static/js/modules/files.js"),
+    import("/static/js/modules/text.js"),
+    import("/static/js/modules/guide.js")
+  ]);
+  moduleState.readEventStream = streamModule.readEventStream;
+  moduleState.formatFileLabel = fileModule.formatFileLabel;
+  moduleState.text = textModule;
+  moduleState.guideHtml = guideModule.guideHtml;
+}
+
 function escapeHtml(value) {
+  if (moduleState.text) return moduleState.text.escapeHtml(value);
   return String(value || "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -145,15 +170,22 @@ function escapeHtml(value) {
 }
 
 function markdownToHtml(markdown) {
-  if (window.marked) return marked.parse(markdown || "");
+  if (moduleState.text) return moduleState.text.markdownToHtml(markdown);
+  if (window.marked) return marked.parse(escapeHtml(markdown || ""));
   return `<pre>${escapeHtml(markdown)}</pre>`;
 }
 
 function cleanSummaryText(markdown = "") {
+  if (moduleState.text) return moduleState.text.cleanSummaryText(markdown);
   return String(markdown || "")
     .replace(/^Source:\s+\S+\s*/gim, "")
     .replace(/^Model:\s+.+\s*/gim, "")
     .trim();
+}
+
+function chatContentHtml(markdown = "") {
+  if (moduleState.text) return moduleState.text.chatMarkdownToHtml(markdown);
+  return escapeHtml(markdown).replaceAll("\n", "<br>");
 }
 
 function chatKeyForTab(tab = activeTab()) {
@@ -179,9 +211,8 @@ function updateChatUploadControls() {
 }
 
 function setZoom(nextZoom) {
-  userZoom = Math.max(.72, Math.min(1.65, nextZoom));
+  summaryZoom = Math.max(.82, Math.min(1.55, nextZoom));
   applyZoom();
-  showToast(`Zoom ${Math.round(userZoom * 100)}%`);
 }
 
 function parseUrls(value = urlInput.value) {
@@ -278,48 +309,8 @@ function startProgressTicker() {
 }
 
 function guideHtml() {
-  return `
-    <div class="setup-guide">
-      <div class="hero">
-        <h2>Make local AI work without guessing.</h2>
-        <p>This app summarizes with the model running on your computer. Set up LM Studio once, then daily use is just paste links and summarize.</p>
-      </div>
-      <div class="guide-grid">
-        <div class="guide-card">
-          <h3>1. Download LM Studio</h3>
-          <ol>
-            <li>Open your browser and go to lmstudio.ai.</li>
-            <li>Download LM Studio for macOS.</li>
-            <li>Install it like any other Mac app.</li>
-          </ol>
-        </div>
-        <div class="guide-card">
-          <h3>2. Choose a model for your RAM</h3>
-          <ul>
-            <li>Minimum: 8 GB RAM. Pick a small 2B-4B instruct model.</li>
-            <li>Recommended: 16 GB RAM. Pick a 4B-8B quantized model.</li>
-            <li>Best: 32 GB+ RAM. Larger 12B-20B quantized models may work.</li>
-          </ul>
-        </div>
-        <div class="guide-card">
-          <h3>3. Start the server</h3>
-          <ol>
-            <li>Open LM Studio.</li>
-            <li>Load exactly one chat or instruct model.</li>
-            <li>Open the Developer or Local Server area.</li>
-            <li>Start the OpenAI-compatible server on port 1234.</li>
-          </ol>
-        </div>
-        <div class="guide-card">
-          <h3>4. Summarize safely</h3>
-          <ul>
-            <li>Use the model dropdown to preview downloaded models.</li>
-            <li>Unload the current model before loading a different one.</li>
-            <li>Paste one or many YouTube links; the app queues them one at a time.</li>
-          </ul>
-        </div>
-      </div>
-    </div>`;
+  if (moduleState.guideHtml) return moduleState.guideHtml();
+  return `<div class="setup-guide"><div class="hero"><h2>LM Studio Setup</h2><p>Guide content is loading.</p></div></div>`;
 }
 
 function emptyHtml(message) {
@@ -527,7 +518,7 @@ async function refreshModels() {
       modelStatus.textContent = `🟢 Model loaded: ${data.current_model}`;
       advancedHint.textContent = "Model loaded";
     } else if (data.status === "no_model") {
-      modelStatus.textContent = "🟡 LM Studio is connected. Choose a model and click Use This Model.";
+      modelStatus.textContent = "🟡 LM Studio is connected. Choose a model and click Load model.";
       advancedHint.textContent = "Load a model";
       modelStatus.classList.add("warning");
     } else if (data.status === "multiple_models") {
@@ -547,6 +538,35 @@ async function refreshModels() {
     modelStatus.classList.add("error");
     advancedHint.textContent = "Needs LM Studio";
     summarizeBtn.disabled = true;
+  }
+}
+
+async function loadSettings() {
+  try {
+    const data = await requestJson("/api/settings");
+    lmStudioPortInput.value = data.settings?.lm_studio_port || 1234;
+  } catch {
+    lmStudioPortInput.value = "1234";
+  }
+}
+
+async function testConnection() {
+  const port = lmStudioPortInput.value.trim();
+  testConnectionBtn.disabled = true;
+  modelStatus.textContent = `Testing LM Studio on port ${port}...`;
+  try {
+    const data = await requestJson("/api/settings/test-lm-studio", {
+      method: "POST",
+      body: JSON.stringify({ port })
+    });
+    state.modelInventory = data.models;
+    showToast(data.models.ok ? "LM Studio connected" : "Connection checked");
+    await refreshModels();
+  } catch (error) {
+    modelStatus.textContent = `🔴 ${error.message}`;
+    modelStatus.classList.add("error");
+  } finally {
+    testConnectionBtn.disabled = false;
   }
 }
 
@@ -894,12 +914,29 @@ async function copyResult() {
   }
 }
 
+async function copyFeedbackEmail() {
+  const email = feedbackEmailBtn?.dataset.email || feedbackEmailBtn?.innerText.trim() || "";
+  if (!email) return;
+  try {
+    await navigator.clipboard.writeText(email);
+    feedbackEmailBtn.classList.remove("copied");
+    void feedbackEmailBtn.offsetWidth;
+    feedbackEmailBtn.classList.add("copied");
+    showToast("Email copied");
+    setTimeout(() => feedbackEmailBtn.classList.remove("copied"), 1300);
+  } catch {
+    showToast("Copy failed");
+  }
+}
+
 function renderChatMessages() {
   const tab = activeTab();
   const key = chatKeyForTab(tab) || tab?.id || "";
   const messages = state.chatHistory.get(key) || [];
   chatMessages.innerHTML = messages.length ? messages.map((message) => `
-    <div class="chat-message ${message.role === "user" ? "user" : "assistant"} ${message.pending ? "thinking" : ""}">${escapeHtml(message.content)}</div>
+    <div class="chat-message ${message.role === "user" ? "user" : "assistant"} ${message.pending ? "thinking" : ""}">
+      <div class="chat-message-content">${message.pending ? escapeHtml(message.content) : chatContentHtml(message.content)}</div>
+    </div>
   `).join("") : '<div class="chat-message">Ask a question about the current summary.</div>';
   if (chatSubtitle) chatSubtitle.textContent = tab?.title || "Ask about this summary";
   chatMessages.scrollTop = chatMessages.scrollHeight;
@@ -946,44 +983,29 @@ async function sendChatMessage(event) {
   chatSendBtn.disabled = true;
   renderChatMessages();
   try {
-    const attachmentNote = attachedFiles.length ? `\n\nAttached files selected in the app:\n${attachedFiles.map((file) => `- ${file.name}`).join("\n")}` : "";
+    const attachmentNote = attachedFiles.length ? `\n\nAttached file text:\n${attachedFiles.map((file) => `File: ${file.name}\n${file.text || ""}`).join("\n\n")}` : "";
     const response = await fetch(api.chatStream, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ summary: summaryText, question: `${question}${attachmentNote}`, model: modelSelect.value, history_id: chatKeyForTab(tab) })
     });
-    if (!response.ok || !response.body) throw new Error("Chat stream failed.");
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
     let answer = "";
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const events = buffer.split("\n\n");
-      buffer = events.pop() || "";
-      for (const eventText of events) {
-        const line = eventText.split("\n").find((item) => item.startsWith("data: "));
-        if (!line) continue;
-        const eventData = JSON.parse(line.slice(6));
-        if (eventData.error) throw new Error(eventData.error);
-        if (eventData.delta) {
-          answer += eventData.delta;
-          const nextMessages = messages.filter((message) => !message.pending);
-          nextMessages.push({ role: "assistant", content: answer || "Thinking…", pending: !answer });
-          state.chatHistory.set(key, nextMessages);
-          renderChatMessages();
-        }
-        if (eventData.done) {
-          const nextMessages = eventData.messages?.length ? eventData.messages : [
-            ...messages.filter((message) => !message.pending),
-            { role: "assistant", content: eventData.answer || answer }
-          ];
-          state.chatHistory.set(key, nextMessages);
-        }
+    await moduleState.readEventStream(response, {
+      onDelta(delta) {
+        answer += delta;
+        const nextMessages = messages.filter((message) => !message.pending);
+        nextMessages.push({ role: "assistant", content: answer || "Thinking…", pending: !answer });
+        state.chatHistory.set(key, nextMessages);
+        renderChatMessages();
+      },
+      onDone(eventData) {
+        const nextMessages = eventData.messages?.length ? eventData.messages : [
+          ...messages.filter((message) => !message.pending),
+          { role: "assistant", content: eventData.answer || answer }
+        ];
+        state.chatHistory.set(key, nextMessages);
       }
-    }
+    });
   } catch (error) {
     const nextMessages = messages.filter((message) => !message.pending);
     nextMessages.push({ role: "assistant", content: error.message });
@@ -994,13 +1016,6 @@ async function sendChatMessage(event) {
   }
 }
 
-function sendFeedback() {
-  const body = feedbackText.value.trim();
-  const subject = encodeURIComponent("YouTube Summary App Feedback");
-  const encodedBody = encodeURIComponent(body || "I want to share feedback about YouTube Summary App.");
-  window.location.href = `mailto:peiliangkrausse@gmail.com?subject=${subject}&body=${encodedBody}`;
-}
-
 function celebrateDonation() {
   summaryPanel.classList.remove("donation-celebrate");
   void summaryPanel.offsetWidth;
@@ -1009,21 +1024,50 @@ function celebrateDonation() {
   setTimeout(() => summaryPanel.classList.remove("donation-celebrate"), 1800);
 }
 
-function openDonation() {
-  celebrateDonation();
+async function openDonation() {
   const donationUrl = donationBtn.dataset.url || "";
-  if (donationUrl) setTimeout(() => window.open(donationUrl, "_blank", "noopener"), 650);
+  if (!donationUrl) {
+    showToast("Donation link is not set");
+    return;
+  }
+  donationBtn.disabled = true;
+  try {
+    const data = await requestJson(api.donation, { method: "POST", body: JSON.stringify({}) });
+    if (!data.opened) window.location.href = donationUrl;
+    setTimeout(celebrateDonation, 350);
+  } catch {
+    window.location.href = donationUrl;
+    showToast("Opening Ko-fi");
+  } finally {
+    donationBtn.disabled = false;
+  }
 }
 
-function attachChatFile(file) {
+async function attachChatFile(file) {
   if (!file) return;
-  attachedFiles.push({ name: file.name, type: file.type || "file", size: file.size || 0 });
-  showToast(`Attached ${file.name}`);
   const key = chatKeyForTab() || activeTab()?.id || "";
   const messages = state.chatHistory.get(key) || [];
-  messages.push({ role: "assistant", content: `Attached: ${file.name}` });
+  messages.push({ role: "assistant", content: `Reading ${moduleState.formatFileLabel ? moduleState.formatFileLabel(file) : file.name}…`, pending: true });
   state.chatHistory.set(key, messages);
   renderChatMessages();
+  const formData = new FormData();
+  formData.append("file", file);
+  try {
+    const response = await fetch("/api/files/ingest", { method: "POST", body: formData });
+    const data = await response.json();
+    if (!response.ok || data.ok === false) throw new Error(data.error || "Could not read file.");
+    attachedFiles.push(data.file);
+    const nextMessages = messages.filter((message) => !message.pending);
+    nextMessages.push({ role: "assistant", content: `Attached and read: ${data.file.filename}${data.file.truncated ? " (trimmed)" : ""}` });
+    state.chatHistory.set(key, nextMessages);
+    showToast(`Attached ${data.file.filename}`);
+  } catch (error) {
+    const nextMessages = messages.filter((message) => !message.pending);
+    nextMessages.push({ role: "assistant", content: error.message });
+    state.chatHistory.set(key, nextMessages);
+  } finally {
+    renderChatMessages();
+  }
 }
 
 function toggleNarration() {
@@ -1051,18 +1095,8 @@ function toggleNarration() {
 }
 
 function handleZoom(event) {
-  if (!event.metaKey && !event.ctrlKey) return;
   const key = event.key.toLowerCase();
-  if (key === "+" || key === "=" || event.code === "Equal" || event.code === "NumpadAdd") {
-    event.preventDefault();
-    setZoom(userZoom + .08);
-  } else if (key === "-" || key === "_" || event.code === "Minus" || event.code === "NumpadSubtract") {
-    event.preventDefault();
-    setZoom(userZoom - .08);
-  } else if (key === "0" || event.code === "Digit0" || event.code === "Numpad0") {
-    event.preventDefault();
-    setZoom(1);
-  } else if (key === "n") {
+  if ((event.metaKey || event.ctrlKey) && key === "n") {
     event.preventDefault();
     createTab();
   }
@@ -1080,6 +1114,7 @@ window.addEventListener("keydown", handleZoom, true);
 document.addEventListener("keydown", handleZoom, true);
 urlInput.addEventListener("input", saveActiveDraft);
 modelSelect.addEventListener("change", updateModelButtons);
+testConnectionBtn.addEventListener("click", testConnection);
 summarizeBtn.addEventListener("click", summarize);
 copyBtn.addEventListener("click", copyResult);
 guideBtn.addEventListener("click", createGuideTab);
@@ -1087,10 +1122,10 @@ speakBtn.addEventListener("click", toggleNarration);
 chatBtn.addEventListener("click", () => toggleChatPanel(true));
 chatCloseBtn.addEventListener("click", () => toggleChatPanel(false));
 chatForm.addEventListener("submit", sendChatMessage);
-sendFeedbackBtn.addEventListener("click", sendFeedback);
 donationBtn.addEventListener("click", openDonation);
-zoomInBtn.addEventListener("click", () => setZoom(userZoom + .08));
-zoomOutBtn.addEventListener("click", () => setZoom(userZoom - .08));
+feedbackEmailBtn?.addEventListener("click", copyFeedbackEmail);
+zoomInBtn.addEventListener("click", () => setZoom(summaryZoom + .08));
+zoomOutBtn.addEventListener("click", () => setZoom(summaryZoom - .08));
 chatFileBtn.addEventListener("click", () => chatFileInput.click());
 chatImageBtn.addEventListener("click", () => chatImageInput.click());
 chatFileInput.addEventListener("change", () => attachChatFile(chatFileInput.files[0]));
@@ -1115,9 +1150,15 @@ activateTab = async function activateTabWithHistory(tabId) {
   originalActivateTab(tabId);
 };
 
-applyZoom();
-createGuideTab();
-refreshModels();
-loadPromptPreset();
-loadPromptPresets();
-loadHistoryTabs();
+loadFrontendModules().then(() => {
+  applyZoom();
+  if (!donationBtn.dataset.url) {
+    donationBtn.disabled = true;
+    donationBtn.title = "Donation link is not configured yet.";
+  }
+  createGuideTab();
+  loadSettings().then(refreshModels);
+  loadPromptPreset();
+  loadPromptPresets();
+  loadHistoryTabs();
+});

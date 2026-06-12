@@ -6,6 +6,7 @@ from pathlib import Path
 block_cipher = None
 project_dir = Path.cwd()
 package_dir = project_dir / "youtube_summary_app"
+icon_file = project_dir / "App Icons" / "YouTubeSummarizer_LightGlass.icns"
 
 datas = [
     (str(package_dir / "templates"), "youtube_summary_app/templates"),
@@ -62,7 +63,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name="YouTube Summary App.app",
-    icon=None,
+    icon=str(icon_file),
     bundle_identifier="com.local.youtubesummaryapp",
     info_plist={
         "CFBundleName": "YouTube Summary App",
@@ -70,4 +71,3 @@ app = BUNDLE(
         "NSHighResolutionCapable": "True",
     },
 )
-
