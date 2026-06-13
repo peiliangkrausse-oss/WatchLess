@@ -1,11 +1,11 @@
 DOWNLOAD AND RUN YOUTUBE SUMMARY APP
 
-This guide is for friends testing YouTube Summary App on a Mac.
+This guide is for friends testing WatchLess on a Mac.
 
 
 1. WHAT THIS APP DOES
 
-YouTube Summary App summarizes YouTube videos using a local AI model through LM Studio.
+WatchLess summarizes YouTube videos using a local AI model through LM Studio.
 
 The app is free and local. It does not include a cloud AI service and it does not include an AI model. To generate summaries, LM Studio must be installed and running on your Mac.
 
@@ -15,7 +15,7 @@ The app is free and local. It does not include a cloud AI service and it does no
 - A Mac with Apple Silicon or a modern Intel Mac.
 - LM Studio installed.
 - One chat or instruct model downloaded in LM Studio.
-- The YouTube-Summary-App.dmg file from the GitHub Release.
+- The WatchLess.dmg file from the GitHub Release.
 
 
 3. DOWNLOAD THE APP
@@ -24,10 +24,10 @@ The app is free and local. It does not include a cloud AI service and it does no
 2. Scroll to Assets.
 3. Download this file:
 
-   YouTube-Summary-App.dmg
+   WatchLess.dmg
 
 4. Open the downloaded DMG.
-5. Copy YouTube Summary App to your Applications folder.
+5. Copy WatchLess to your Applications folder.
 
 Do not download "Source code" unless you are a developer. Normal users need the DMG file.
 
@@ -39,14 +39,14 @@ This is a free unsigned test build. Apple may warn that it cannot verify the app
 Try this first:
 
 1. Open Applications.
-2. Find YouTube Summary App.
+2. Find WatchLess.
 3. Right-click or Control-click the app.
 4. Choose Open.
 5. Confirm Open again if macOS asks.
 
 If macOS still blocks it, open Terminal and run:
 
-   xattr -dr com.apple.quarantine "/Applications/YouTube Summary App.app"
+   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
 
 Then open the app again.
 
@@ -62,7 +62,7 @@ Then open the app again.
 4. Load exactly one model.
 5. Open LM Studio's Developer or Local Server area.
 6. Start the local server on port 1234.
-7. Open YouTube Summary App.
+7. Open WatchLess.
 8. Click Test Connection.
 9. Paste a YouTube URL.
 10. Click Summarize Queue.
@@ -91,7 +91,7 @@ Problem: macOS says the app cannot be opened.
 
 Use right-click > Open first. If that does not work, run:
 
-   xattr -dr com.apple.quarantine "/Applications/YouTube Summary App.app"
+   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
 
 
 Problem: The app says LM Studio is not connected.

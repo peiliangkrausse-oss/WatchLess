@@ -1,29 +1,29 @@
-YOUTUBE SUMMARY APP V1.0.0
+WATCHLESS V1.0.0
 
 Badass release title:
 
-LOCAL BRAIN, NO CLOUD: YouTube Summary App v1.0.0
+LOCAL BRAIN, NO CLOUD: WatchLess v1.0.0
 
 
 Short description:
 
-YouTube Summary App is a local Mac app that summarizes YouTube videos with LM Studio. Paste one or more YouTube links, queue summaries, save Markdown history, and chat with your local model about the result.
+WatchLess is a local Mac app that summarizes YouTube videos with LM Studio. Paste one or more YouTube links, queue summaries, save Markdown history, and chat with your local model about the result.
 
 
 Download:
 
 Download this file from the release Assets:
 
-   YouTube-Summary-App.dmg
+   WatchLess.dmg
 
 Do not download "Source code" unless you are a developer.
 
 
 Artifact details:
 
-File: dist/YouTube-Summary-App.dmg
-Size: 33 MB
-SHA-256: 07e877b3c1293ec913d0810787f02ba9cfd9ac6bc1caa1825f05032c2fa2d28e
+File: dist/WatchLess.dmg
+Size: 34 MB
+SHA-256: d79490ace95d7265aa2d6dbd965459d20282653398f086edf7552df1a2064a4a
 
 
 Important first launch note:
@@ -33,13 +33,13 @@ This is an unsigned, non-notarized friend-test build. macOS may warn that it can
 To open it:
 
 1. Move the app to Applications.
-2. Right-click or Control-click YouTube Summary App.
+2. Right-click or Control-click WatchLess.
 3. Choose Open.
 4. Confirm Open again.
 
 If macOS still blocks it, run this in Terminal:
 
-   xattr -dr com.apple.quarantine "/Applications/YouTube Summary App.app"
+   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
 
 Then open the app again.
 

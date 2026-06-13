@@ -1,12 +1,12 @@
 from pathlib import Path
 
-import youtube_summary_app.services.prompt_store as prompt_store_module
-from youtube_summary_app.app import create_app
-from youtube_summary_app.services.chat_store import ChatStore
-from youtube_summary_app.services.file_ingestion import FileIngestionService
-from youtube_summary_app.services.history_store import HistoryStore
-from youtube_summary_app.services.prompt_store import PromptStore
-from youtube_summary_app.services.settings_store import SettingsStore
+import watchless_app.services.prompt_store as prompt_store_module
+from watchless_app.app import create_app
+from watchless_app.services.chat_store import ChatStore
+from watchless_app.services.file_ingestion import FileIngestionService
+from watchless_app.services.history_store import HistoryStore
+from watchless_app.services.prompt_store import PromptStore
+from watchless_app.services.settings_store import SettingsStore
 
 
 def test_chat_store_persists_messages(tmp_path: Path):
@@ -70,7 +70,7 @@ def test_feedback_email_endpoint_opens_mailto(monkeypatch):
         opened_urls.append(url)
         return True
 
-    monkeypatch.setattr("youtube_summary_app.routes.api._open_external_url", fake_open)
+    monkeypatch.setattr("watchless_app.routes.api._open_external_url", fake_open)
     app = create_app()
     client = app.test_client()
 

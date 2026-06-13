@@ -2,8 +2,8 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from youtube_summary_app.config import HISTORY_DIR, MAX_HISTORY_ITEMS
-from youtube_summary_app.errors import AppError
+from watchless_app.config import HISTORY_DIR, MAX_HISTORY_ITEMS
+from watchless_app.errors import AppError
 
 
 def _slugify(value: str) -> str:
@@ -27,7 +27,7 @@ class HistoryStore:
             history_id = f"{datetime.now().strftime('%Y%m%d-%H%M%S')}-{_slugify(video_id or title)}"
             filename = f"{history_id}.md"
             path = self.history_dir / filename
-            safe_title = (title or "YouTube Summary").replace("\n", " ").strip()
+            safe_title = (title or "WatchLess").replace("\n", " ").strip()
             content = (
                 "---\n"
                 f'id: "{history_id}"\n'

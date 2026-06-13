@@ -4,8 +4,8 @@ import uuid
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 
-from youtube_summary_app.config import JOB_RETENTION_LIMIT
-from youtube_summary_app.errors import AppError
+from watchless_app.config import JOB_RETENTION_LIMIT
+from watchless_app.errors import AppError
 
 
 def _now() -> str:

@@ -1,9 +1,9 @@
 const FEEDBACK_EMAIL = "peiliangkrausse@gmail.com";
 
 export function feedbackPayload(message) {
-  const body = String(message || "").trim() || "I want to share feedback about YouTube Summary App.";
+  const body = String(message || "").trim() || "I want to share feedback about WatchLess.";
   return {
-    subject: "YouTube Summary App Feedback",
+    subject: "WatchLess Feedback",
     body,
     email: FEEDBACK_EMAIL
   };

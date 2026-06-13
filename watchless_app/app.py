@@ -1,17 +1,17 @@
 from flask import Flask
 from flask_cors import CORS
 
-from youtube_summary_app.routes.api import api_bp, legacy_bp
-from youtube_summary_app.routes.pages import pages_bp
-from youtube_summary_app.services.chat_store import ChatStore
-from youtube_summary_app.services.history_store import HistoryStore
-from youtube_summary_app.services.file_ingestion import FileIngestionService
-from youtube_summary_app.services.job_queue import SummaryJobQueue
-from youtube_summary_app.services.lm_studio_client import LMStudioClient
-from youtube_summary_app.services.prompt_store import PromptStore
-from youtube_summary_app.services.settings_store import SettingsStore
-from youtube_summary_app.services.summarizer import Summarizer
-from youtube_summary_app.services.transcript_service import TranscriptService
+from watchless_app.routes.api import api_bp, legacy_bp
+from watchless_app.routes.pages import pages_bp
+from watchless_app.services.chat_store import ChatStore
+from watchless_app.services.history_store import HistoryStore
+from watchless_app.services.file_ingestion import FileIngestionService
+from watchless_app.services.job_queue import SummaryJobQueue
+from watchless_app.services.lm_studio_client import LMStudioClient
+from watchless_app.services.prompt_store import PromptStore
+from watchless_app.services.settings_store import SettingsStore
+from watchless_app.services.summarizer import Summarizer
+from watchless_app.services.transcript_service import TranscriptService
 
 
 def create_app() -> Flask:

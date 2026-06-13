@@ -7,8 +7,8 @@ import requests
 import yt_dlp
 from youtube_transcript_api import YouTubeTranscriptApi
 
-from youtube_summary_app.config import MAX_TRANSCRIPT_WORDS, SUPPORTED_TRANSCRIPT_LANGUAGES
-from youtube_summary_app.errors import TranscriptError
+from watchless_app.config import MAX_TRANSCRIPT_WORDS, SUPPORTED_TRANSCRIPT_LANGUAGES
+from watchless_app.errors import TranscriptError
 
 
 class TranscriptService:

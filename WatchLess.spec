@@ -5,12 +5,12 @@ from pathlib import Path
 
 block_cipher = None
 project_dir = Path.cwd()
-package_dir = project_dir / "youtube_summary_app"
-icon_file = project_dir / "App Icons" / "YouTubeSummarizer_LightGlass.icns"
+package_dir = project_dir / "watchless_app"
+icon_file = project_dir / "App Icons" / "YouTubeSummaryApp_macOS_no_glow.icns"
 
 datas = [
-    (str(package_dir / "templates"), "youtube_summary_app/templates"),
-    (str(package_dir / "static"), "youtube_summary_app/static"),
+    (str(package_dir / "templates"), "watchless_app/templates"),
+    (str(package_dir / "static"), "watchless_app/static"),
 ]
 
 a = Analysis(
@@ -36,7 +36,7 @@ exe = EXE(
     a.scripts,
     [],
     exclude_binaries=True,
-    name="YouTube Summary App",
+    name="WatchLess",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -57,17 +57,17 @@ coll = COLLECT(
     strip=False,
     upx=True,
     upx_exclude=[],
-    name="YouTube Summary App",
+    name="WatchLess",
 )
 
 app = BUNDLE(
     coll,
-    name="YouTube Summary App.app",
+    name="WatchLess.app",
     icon=str(icon_file),
-    bundle_identifier="com.local.youtubesummaryapp",
+    bundle_identifier="com.local.watchless",
     info_plist={
-        "CFBundleName": "YouTube Summary App",
-        "CFBundleDisplayName": "YouTube Summary App",
+        "CFBundleName": "WatchLess",
+        "CFBundleDisplayName": "WatchLess",
         "NSHighResolutionCapable": "True",
     },
 )

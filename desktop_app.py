@@ -1,4 +1,4 @@
-from youtube_summary_app.desktop import main
+from watchless_app.desktop import main
 
 
 if __name__ == "__main__":

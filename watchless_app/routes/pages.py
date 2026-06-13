@@ -1,6 +1,6 @@
 from flask import Blueprint, render_template
 
-from youtube_summary_app.config import DONATION_URL, FEEDBACK_EMAIL
+from watchless_app.config import DONATION_URL, FEEDBACK_EMAIL
 
 
 pages_bp = Blueprint("pages", __name__)

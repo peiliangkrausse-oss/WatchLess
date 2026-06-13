@@ -1,8 +1,8 @@
 #!/bin/zsh
 set -euo pipefail
 
-APP_NAME="YouTube Summary App"
-DMG_NAME="YouTube-Summary-App.dmg"
+APP_NAME="WatchLess"
+DMG_NAME="WatchLess.dmg"
 SIGN_IDENTITY="${SIGN_IDENTITY:-}"
 NOTARY_APPLE_ID="${NOTARY_APPLE_ID:-}"
 NOTARY_TEAM_ID="${NOTARY_TEAM_ID:-}"
@@ -16,9 +16,9 @@ if [ ! -x ".venv/bin/python" ]; then
 fi
 
 rm -rf build dist "$DMG_NAME"
-.venv/bin/python -m PyInstaller --clean --noconfirm "YouTube Summary App.spec"
+.venv/bin/python -m PyInstaller --clean --noconfirm "WatchLess.spec"
 
-CLEAN_APP="/private/tmp/youtube-summary-clean.app"
+CLEAN_APP="/private/tmp/watchless-clean.app"
 rm -rf "$CLEAN_APP"
 if command -v ditto >/dev/null 2>&1; then
   ditto --norsrc --noextattr "dist/$APP_NAME.app" "$CLEAN_APP"

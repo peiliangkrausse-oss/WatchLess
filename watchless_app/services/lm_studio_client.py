@@ -3,9 +3,9 @@ import json
 
 import requests
 
-from youtube_summary_app.config import LM_STUDIO_BASE_URL, LM_STUDIO_NATIVE_BASE_URL
-from youtube_summary_app.errors import ModelError
-from youtube_summary_app.services.settings_store import SettingsStore
+from watchless_app.config import LM_STUDIO_BASE_URL, LM_STUDIO_NATIVE_BASE_URL
+from watchless_app.errors import ModelError
+from watchless_app.services.settings_store import SettingsStore
 
 
 MEMORY_ERROR_TRIGGERS = [

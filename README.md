@@ -1,4 +1,4 @@
-# YouTube Summary App
+# WatchLess
 
 A local macOS desktop app that summarizes YouTube videos with LM Studio.
 
@@ -20,25 +20,25 @@ The older Desktop folder is not the active source of truth.
 desktop_app.py
   Desktop launcher.
 
-youtube_summary_app/app.py
+watchless_app/app.py
   Flask app factory and service wiring.
 
-youtube_summary_app/routes/
+watchless_app/routes/
   Page routes and JSON/SSE API routes.
 
-youtube_summary_app/services/
+watchless_app/services/
   Business logic: LM Studio, transcripts, summaries, queue, history, prompt presets, chat memory.
 
-youtube_summary_app/templates/index.html
+watchless_app/templates/index.html
   Main app HTML shell.
 
-youtube_summary_app/static/css/styles.css
+watchless_app/static/css/styles.css
   App styling.
 
-youtube_summary_app/static/js/app.js
+watchless_app/static/js/app.js
   Main browser behavior orchestration.
 
-youtube_summary_app/static/js/modules/
+watchless_app/static/js/modules/
   Focused frontend helpers for streaming, files, guide content, feedback, and Markdown/text rendering.
 
 yt_summarizer_final_readability_updated.html
@@ -56,7 +56,7 @@ publish.sh
 User data is stored outside the repo:
 
 ```text
-~/Library/Application Support/YouTube Summary App/
+~/Library/Application Support/WatchLess/
 ```
 
 Important folders:
@@ -98,7 +98,7 @@ Run browser preview only:
 
 ```bash
 .venv/bin/python - <<'PY'
-from youtube_summary_app.app import create_app
+from watchless_app.app import create_app
 app = create_app()
 app.run(host="127.0.0.1", port=5055, debug=False, use_reloader=False)
 PY
@@ -135,9 +135,9 @@ Small machines should use smaller quantized models. If the app says no model is 
 
 ## App Versus DMG
 
-`dist/YouTube Summary App.app` is the actual macOS application bundle.
+`dist/WatchLess.app` is the actual macOS application bundle.
 
-`dist/YouTube-Summary-App.dmg` is the shareable installer-style disk image. Send the DMG to friends, not the raw app bundle.
+`dist/WatchLess.dmg` is the shareable installer-style disk image. Send the DMG to friends, not the raw app bundle.
 
 Technically, friends can download a DMG from email, open it, and run the app. Practically, email providers often block or warn on app attachments, and macOS Gatekeeper may warn if the app is not signed and notarized. For a smoother friend test, share the DMG through GitHub Releases, Google Drive, Dropbox, or a website, and use Apple notarization before a wider public release.
 
@@ -161,8 +161,8 @@ chmod +x publish.sh
 Expected output:
 
 ```text
-dist/YouTube Summary App.app
-dist/YouTube-Summary-App.dmg
+dist/WatchLess.app
+dist/WatchLess.dmg
 ```
 
 Friends can download the DMG, open it, drag the app into Applications, then right-click the app and choose **Open** the first time.
@@ -192,7 +192,7 @@ export NOTARY_PASSWORD="app-specific-password"
 Use Git tags for app versions:
 
 ```bash
-git tag -a v0.1.0 -m "YouTube Summary App v0.1.0"
+git tag -a v0.1.0 -m "WatchLess v0.1.0"
 git push origin v0.1.0
 ```
 
@@ -268,9 +268,9 @@ Do not reintroduce root-level prototype apps. `desktop_app.py` is the entrypoint
 
 1. Run `git status` and confirm only intended files changed.
 2. Run `.venv/bin/python -m pytest -q`.
-3. Run `node --check youtube_summary_app/static/js/app.js`.
+3. Run `node --check watchless_app/static/js/app.js`.
 4. Run `./publish.sh`.
-5. Open `dist/YouTube Summary App.app` and smoke test guide, model status, feedback, donation, chat, and summarize flow.
+5. Open `dist/WatchLess.app` and smoke test guide, model status, feedback, donation, chat, and summarize flow.
 6. Commit the changes.
 7. Create an annotated release tag.
 8. Push `main` and the tag.

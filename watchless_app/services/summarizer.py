@@ -1,8 +1,8 @@
-from youtube_summary_app.errors import AppError
-from youtube_summary_app.services.history_store import HistoryStore
-from youtube_summary_app.services.lm_studio_client import LMStudioClient
-from youtube_summary_app.services.prompt_store import PromptStore
-from youtube_summary_app.services.transcript_service import TranscriptService
+from watchless_app.errors import AppError
+from watchless_app.services.history_store import HistoryStore
+from watchless_app.services.lm_studio_client import LMStudioClient
+from watchless_app.services.prompt_store import PromptStore
+from watchless_app.services.transcript_service import TranscriptService
 
 
 class Summarizer:

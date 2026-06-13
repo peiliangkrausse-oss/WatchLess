@@ -1,2 +1,0 @@
-"""YouTube Summary App package."""
-

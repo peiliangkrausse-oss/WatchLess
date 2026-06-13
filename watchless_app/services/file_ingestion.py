@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pypdf import PdfReader
 
-from youtube_summary_app.errors import AppError
+from watchless_app.errors import AppError
 
 
 MAX_FILE_TEXT_CHARS = 30000

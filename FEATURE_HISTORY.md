@@ -1,4 +1,4 @@
-# YouTube Summary App Feature History
+# WatchLess Feature History
 
 This file records the app's feature evolution, additions, removals, and current product state. It is written so a future developer or LLM can understand what exists, what was intentionally removed, and why the app looks and behaves the way it does.
 
@@ -13,10 +13,10 @@ This file records the app's feature evolution, additions, removals, and current 
 
 ### Architecture Refactor And Tabbed Workflow
 
-- Split the app into a Flask package under `youtube_summary_app/`.
-- Added an app factory in `youtube_summary_app/app.py`.
-- Added route blueprints under `youtube_summary_app/routes/`.
-- Added service modules under `youtube_summary_app/services/`.
+- Split the app into a Flask package under `watchless_app/`.
+- Added an app factory in `watchless_app/app.py`.
+- Added route blueprints under `watchless_app/routes/`.
+- Added service modules under `watchless_app/services/`.
 - Moved away from a single-file prototype toward a maintainable app structure.
 - Added tabbed summary workflow in the browser UI.
 - Added saved history tabs and per-tab state.
@@ -111,14 +111,14 @@ This file records the app's feature evolution, additions, removals, and current 
 
 ## Known Risks And Gaps
 
-- `youtube_summary_app/static/js/app.js` is large and owns many workflows. It should eventually be split by workflow:
+- `watchless_app/static/js/app.js` is large and owns many workflows. It should eventually be split by workflow:
   - tabs
   - queue
   - models/settings
   - prompt presets
   - chat
   - support actions
-- `youtube_summary_app/static/css/styles.css` is dense and would benefit from section comments or smaller files.
+- `watchless_app/static/css/styles.css` is dense and would benefit from section comments or smaller files.
 - For richer Markdown, a local vendored parser could replace the current basic fallback parser.
 - The app is packaged for macOS but unsigned/notarized builds may trigger Gatekeeper warnings.
 - File ingestion is text extraction only; multimodal image understanding is not implemented.

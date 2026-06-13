@@ -3,7 +3,7 @@ import re
 from datetime import datetime, timezone
 from pathlib import Path
 
-from youtube_summary_app.config import CHAT_DIR
+from watchless_app.config import CHAT_DIR
 
 
 def _safe_id(value: str) -> str:

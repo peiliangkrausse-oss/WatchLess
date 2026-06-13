@@ -4,7 +4,7 @@ export function guideHtml() {
         <div class="hero">
         <h2>Run your youtube summaries locally on device</h2>
         <p>This app summarizes with AI running on your computer. No cloud. Never run out of tokens. Infinite usage.</p>
-        <p>This requires you to download LM Studio, which will act like a local server on your computer and host your local AI. It's completely free. Set up LM Studio once, connect it to youtube summary app and voilà!</p>
+        <p>This requires you to download LM Studio, which will act like a local server on your computer and host your local AI. It's completely free. Set up LM Studio once, connect it to WatchLess and voilà!</p>
       </div>
 
       <div class="guide-flow">

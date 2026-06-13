@@ -7,18 +7,18 @@ Use this checklist to publish a free unsigned Mac build for friends.
 
 Current local artifact:
 
-   dist/YouTube-Summary-App.dmg
+   dist/WatchLess.dmg
 
 Current checksum:
 
-   07e877b3c1293ec913d0810787f02ba9cfd9ac6bc1caa1825f05032c2fa2d28e
+   d79490ace95d7265aa2d6dbd965459d20282653398f086edf7552df1a2064a4a
 
 
 2. CREATE THE GITHUB RELEASE
 
 1. Open the repository on GitHub:
 
-   https://github.com/peiliangkrausse-oss/Youtube-Summary
+   https://github.com/peiliangkrausse-oss/WatchLess
 
 2. Click Releases.
 3. Click Draft a new release.
@@ -28,7 +28,7 @@ Current checksum:
 
 5. Release title:
 
-   LOCAL BRAIN, NO CLOUD: YouTube Summary App v1.0.0
+   LOCAL BRAIN, NO CLOUD: WatchLess v1.0.0
 
 6. Paste the contents of:
 
@@ -36,7 +36,7 @@ Current checksum:
 
 7. Under "Attach binaries by dropping them here or selecting them", upload:
 
-   dist/YouTube-Summary-App.dmg
+   dist/WatchLess.dmg
 
 8. Click Publish release.
 
@@ -47,12 +47,12 @@ After publishing, send friends the release page link, not the repository source 
 
 The link will look like:
 
-   https://github.com/peiliangkrausse-oss/Youtube-Summary/releases/tag/v1.0.0
+   https://github.com/peiliangkrausse-oss/WatchLess/releases/tag/v1.0.0
 
 
 4. SHORT MESSAGE TO SEND FRIENDS
 
-Download YouTube-Summary-App.dmg from Assets, not Source code.
+Download WatchLess.dmg from Assets, not Source code.
 Because this is a free unsigned Mac build, open it with right-click > Open the first time.
 You also need LM Studio installed, one model loaded, and the local server running on port 1234.
 Instructions are in DOWNLOAD_INSTRUCTIONS.txt.
@@ -62,6 +62,6 @@ Instructions are in DOWNLOAD_INSTRUCTIONS.txt.
 
 Tell testers to run:
 
-   xattr -dr com.apple.quarantine "/Applications/YouTube Summary App.app"
+   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
 
 This is the free workaround when the app is not notarized through Apple's paid developer program.

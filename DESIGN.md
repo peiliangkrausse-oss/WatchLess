@@ -1,4 +1,4 @@
-# YouTube Summary App Design Blueprint
+# WatchLess Design Blueprint
 
 This file documents the app's visual design, fonts, layout, UI structure, and interaction language. It is intended to let another designer, engineer, or LLM recreate the product interface if the implementation is lost.
 
@@ -337,10 +337,10 @@ Structure:
 Guide image assets:
 
 ```text
-youtube_summary_app/static/images/guide/lm-studio-model-search.png
-youtube_summary_app/static/images/guide/lm-studio-local-server.png
-youtube_summary_app/static/images/guide/lm-studio-gpt-oss-model.png
-youtube_summary_app/static/images/guide/lm-studio-download-models.png
+watchless_app/static/images/guide/lm-studio-model-search.png
+watchless_app/static/images/guide/lm-studio-local-server.png
+watchless_app/static/images/guide/lm-studio-gpt-oss-model.png
+watchless_app/static/images/guide/lm-studio-download-models.png
 ```
 
 ## Important CSS Components

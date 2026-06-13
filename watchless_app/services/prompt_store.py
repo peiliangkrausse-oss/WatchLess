@@ -2,7 +2,7 @@ import json
 import re
 from datetime import datetime, timezone
 
-from youtube_summary_app.config import DEFAULT_PROMPT, PROMPT_PRESET_FILE, PROMPT_PRESETS_DIR
+from watchless_app.config import DEFAULT_PROMPT, PROMPT_PRESET_FILE, PROMPT_PRESETS_DIR
 
 
 def _slugify(value: str) -> str:

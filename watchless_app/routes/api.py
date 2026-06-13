@@ -7,9 +7,9 @@ import webbrowser
 
 from flask import Blueprint, Response, current_app, jsonify, request, stream_with_context
 
-from youtube_summary_app.config import DONATION_URL, FEEDBACK_EMAIL
-from youtube_summary_app.errors import AppError
-from youtube_summary_app.services.job_queue import serialize_job
+from watchless_app.config import DONATION_URL, FEEDBACK_EMAIL
+from watchless_app.errors import AppError
+from watchless_app.services.job_queue import serialize_job
 
 
 api_bp = Blueprint("api", __name__, url_prefix="/api")
@@ -232,8 +232,8 @@ def ingest_file():
 @api_bp.route("/feedback/email", methods=["POST"])
 def open_feedback_email():
     payload = request.json or {}
-    body = (payload.get("body") or "").strip() or "I want to share feedback about YouTube Summary App."
-    subject = (payload.get("subject") or "YouTube Summary App Feedback").strip()
+    body = (payload.get("body") or "").strip() or "I want to share feedback about WatchLess."
+    subject = (payload.get("subject") or "WatchLess Feedback").strip()
     mailto = f"mailto:{FEEDBACK_EMAIL}?subject={quote(subject)}&body={quote(body)}"
     try:
         opened = _open_external_url(mailto)

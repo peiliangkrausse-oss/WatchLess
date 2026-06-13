@@ -1,10 +1,10 @@
-# YouTube Summary App Blueprint
+# WatchLess Blueprint
 
 This is the implementation blueprint for rebuilding the app if the codebase is lost or corrupted. It describes the app's purpose, architecture, data flow, API surface, local storage, and rebuild order.
 
 ## Product Summary
 
-YouTube Summary App is a local macOS desktop app for summarizing YouTube videos using LM Studio. The user pastes one or more YouTube URLs, chooses or auto-detects a loaded LM Studio model, and queues summaries. Results are rendered as Markdown, saved locally, and can be discussed with a local chat model.
+WatchLess is a local macOS desktop app for summarizing YouTube videos using LM Studio. The user pastes one or more YouTube URLs, chooses or auto-detects a loaded LM Studio model, and queues summaries. Results are rendered as Markdown, saved locally, and can be discussed with a local chat model.
 
 The app is intentionally local-first:
 
@@ -29,34 +29,34 @@ The app is intentionally local-first:
 desktop_app.py
   Desktop entrypoint.
 
-youtube_summary_app/app.py
+watchless_app/app.py
   Flask app factory. Wires all services and registers blueprints.
 
-youtube_summary_app/config.py
+watchless_app/config.py
   App constants, local storage paths, LM Studio defaults, and default prompt.
 
-youtube_summary_app/errors.py
+watchless_app/errors.py
   User-facing AppError, TranscriptError, and ModelError types.
 
-youtube_summary_app/routes/pages.py
+watchless_app/routes/pages.py
   Renders the main app page.
 
-youtube_summary_app/routes/api.py
+watchless_app/routes/api.py
   JSON and streaming API routes.
 
-youtube_summary_app/services/
+watchless_app/services/
   Business logic services.
 
-youtube_summary_app/templates/index.html
+watchless_app/templates/index.html
   Main HTML shell.
 
-youtube_summary_app/static/css/styles.css
+watchless_app/static/css/styles.css
   Complete visual system and responsive layout.
 
-youtube_summary_app/static/js/app.js
+watchless_app/static/js/app.js
   Browser workflow orchestration.
 
-youtube_summary_app/static/js/modules/
+watchless_app/static/js/modules/
   Small helpers for files, guide HTML, streaming, and text/Markdown.
 
 tests/test_storage_and_api.py
@@ -78,7 +78,7 @@ Purpose:
 Storage:
 
 ```text
-~/Library/Application Support/YouTube Summary App/settings.json
+~/Library/Application Support/WatchLess/settings.json
 ```
 
 Important behavior:
@@ -170,7 +170,7 @@ Purpose:
 Storage:
 
 ```text
-~/Library/Application Support/YouTube Summary App/history/
+~/Library/Application Support/WatchLess/history/
 ```
 
 ### `ChatStore`
@@ -183,7 +183,7 @@ Purpose:
 Storage:
 
 ```text
-~/Library/Application Support/YouTube Summary App/chat/
+~/Library/Application Support/WatchLess/chat/
 ```
 
 ### `PromptStore`
@@ -197,8 +197,8 @@ Purpose:
 Storage:
 
 ```text
-~/Library/Application Support/YouTube Summary App/prompt_preset.json
-~/Library/Application Support/YouTube Summary App/prompt_presets/
+~/Library/Application Support/WatchLess/prompt_preset.json
+~/Library/Application Support/WatchLess/prompt_presets/
 ```
 
 ### `FileIngestionService`
@@ -278,7 +278,7 @@ Returns app health.
 
 ## Frontend State Model
 
-Main state lives in `youtube_summary_app/static/js/app.js`.
+Main state lives in `watchless_app/static/js/app.js`.
 
 ```js
 state = {
@@ -392,7 +392,7 @@ For manual browser preview:
 
 ```bash
 .venv/bin/python - <<'PY'
-from youtube_summary_app.app import create_app
+from watchless_app.app import create_app
 app = create_app()
 app.run(host="127.0.0.1", port=5055, debug=False, use_reloader=False)
 PY

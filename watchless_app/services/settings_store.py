@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from youtube_summary_app.config import APP_SUPPORT_DIR, LM_STUDIO_PORT
+from watchless_app.config import APP_SUPPORT_DIR, LM_STUDIO_PORT
 
 
 SETTINGS_FILE = APP_SUPPORT_DIR / "settings.json"
