@@ -117,7 +117,8 @@
 
   <main class="content">
     <section class="summary-panel" id="summaryPanel">
-      <div class="zoom-controls" aria-label="Zoom controls">
+      <div class="reader-controls" aria-label="Reader controls">
+        <button class="reader-copy-btn" id="copyBtn" type="button" title="Copy summary"><svg viewBox="0 0 24 24" fill="none"><path d="M9 9h10v10H9z" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Copy</span></button>
         <button type="button" id="zoomOutBtn" title="Zoom out">−</button>
         <button type="button" id="zoomInBtn" title="Zoom in">+</button>
       </div>
@@ -138,9 +139,6 @@
       </div>
       <div class="progress-track" id="progressTrack" hidden><div class="progress-fill" id="progressFill"></div></div>
       <div class="summary-body">
-        <div class="summary-tools">
-          <button class="inline-copy-btn" id="copyBtn" type="button"><svg viewBox="0 0 24 24" fill="none"><path d="M9 9h10v10H9z" stroke="currentColor" stroke-width="2"/><path d="M5 15H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span>Copy</span></button>
-        </div>
         <div class="summary-content" id="summary"></div>
       </div>
     </section>
