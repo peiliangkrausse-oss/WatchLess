@@ -9,7 +9,7 @@ import webview
 from watchless_app.app import create_app
 from watchless_app.config import APP_NAME, PORT
 
-APP_ICON_FILENAME = "YouTubeSummaryApp_macOS_no_glow.icns"
+APP_ICON_FILENAME = "WatchLess.icns"
 
 
 def wait_for_server(host: str = "127.0.0.1", port: int = PORT, timeout: int = 10) -> bool:

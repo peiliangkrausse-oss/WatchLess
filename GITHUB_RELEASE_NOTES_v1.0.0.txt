@@ -23,7 +23,7 @@ Artifact details:
 
 File: dist/WatchLess.dmg
 Size: 34 MB
-SHA-256: d79490ace95d7265aa2d6dbd965459d20282653398f086edf7552df1a2064a4a
+SHA-256: dd9ba8e1bc98885d632731b75ede1f2531d34620641c9c05988752f06605fd19
 
 
 Important first launch note:

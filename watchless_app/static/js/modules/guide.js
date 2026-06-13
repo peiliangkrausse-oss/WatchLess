@@ -49,7 +49,7 @@ export function guideHtml() {
             <div class="step-kicker">Step 4</div>
             <h3>Start the local server</h3>
             <p>Navigate to the left side bar again and find <strong>Developer</strong>. Activate your local server by toggling <strong>Status: Running</strong>.</p>
-            <p>You can paste the last 4 digits of your server address in the app to test the connection between YT summarizer app and LM Studio.</p>
+            <p>You can paste the last 4 digits of your server address in the app to test the connection between WatchLess and LM Studio.</p>
           </div>
           <figure>
             <img src="/static/images/guide/lm-studio-local-server.png" alt="LM Studio Developer screen showing the Local Server running on port 1234">
@@ -58,8 +58,8 @@ export function guideHtml() {
 
         <section class="guide-step">
           <div class="step-kicker">Step 5</div>
-          <h3>Load the model in YT Summarizer</h3>
-          <p>Once connected, YT summarizer app will show your available models. Load the model by clicking <strong>Load model</strong>.</p>
+          <h3>Load the model in WatchLess</h3>
+          <p>Once connected, WatchLess will show your available models. Load the model by clicking <strong>Load model</strong>.</p>
         </section>
       </div>
     </div>`;

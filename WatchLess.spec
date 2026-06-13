@@ -6,7 +6,7 @@ from pathlib import Path
 block_cipher = None
 project_dir = Path.cwd()
 package_dir = project_dir / "watchless_app"
-icon_file = project_dir / "App Icons" / "YouTubeSummaryApp_macOS_no_glow.icns"
+icon_file = project_dir / "App Icons" / "WatchLess.icns"
 
 datas = [
     (str(package_dir / "templates"), "watchless_app/templates"),
