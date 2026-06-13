@@ -144,9 +144,9 @@ Technically, friends can download a DMG from email, open it, and run the app. Pr
 Friend-test instructions live in:
 
 ```text
-DOWNLOAD_INSTRUCTIONS.md
-GITHUB_RELEASE_NOTES_v1.0.0.md
-RELEASE_CHECKLIST.md
+DOWNLOAD_INSTRUCTIONS.txt
+GITHUB_RELEASE_NOTES_v1.0.0.txt
+RELEASE_CHECKLIST.txt
 ```
 
 ## Build A DMG
