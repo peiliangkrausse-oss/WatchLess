@@ -5,9 +5,11 @@ from youtube_summary_app.routes.api import api_bp, legacy_bp
 from youtube_summary_app.routes.pages import pages_bp
 from youtube_summary_app.services.chat_store import ChatStore
 from youtube_summary_app.services.history_store import HistoryStore
+from youtube_summary_app.services.file_ingestion import FileIngestionService
 from youtube_summary_app.services.job_queue import SummaryJobQueue
 from youtube_summary_app.services.lm_studio_client import LMStudioClient
 from youtube_summary_app.services.prompt_store import PromptStore
+from youtube_summary_app.services.settings_store import SettingsStore
 from youtube_summary_app.services.summarizer import Summarizer
 from youtube_summary_app.services.transcript_service import TranscriptService
 
@@ -19,7 +21,8 @@ def create_app() -> Flask:
     prompt_store = PromptStore()
     history_store = HistoryStore()
     chat_store = ChatStore()
-    lm_studio = LMStudioClient()
+    settings_store = SettingsStore()
+    lm_studio = LMStudioClient(settings_store=settings_store)
     transcript_service = TranscriptService()
     summarizer = Summarizer(transcript_service, lm_studio, prompt_store, history_store)
 
@@ -27,6 +30,8 @@ def create_app() -> Flask:
         "prompt_store": prompt_store,
         "history_store": history_store,
         "chat_store": chat_store,
+        "settings_store": settings_store,
+        "file_ingestion": FileIngestionService(),
         "lm_studio": lm_studio,
         "transcript_service": transcript_service,
         "summarizer": summarizer,

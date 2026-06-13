@@ -1,7 +1,13 @@
 import json
+import os
+import subprocess
+import sys
+from urllib.parse import quote
+import webbrowser
 
 from flask import Blueprint, Response, current_app, jsonify, request, stream_with_context
 
+from youtube_summary_app.config import DONATION_URL, FEEDBACK_EMAIL
 from youtube_summary_app.errors import AppError
 from youtube_summary_app.services.job_queue import serialize_job
 
@@ -16,6 +22,20 @@ def _json_error(exc: Exception, status_code: int = 500):
     return jsonify({"ok": False, "error": str(exc), "error_type": "unexpected_error"}), status_code
 
 
+def _open_external_url(url: str) -> bool:
+    try:
+        if sys.platform == "darwin":
+            subprocess.Popen(["open", url])
+            return True
+        if os.name == "nt":
+            os.startfile(url)  # type: ignore[attr-defined]
+            return True
+        subprocess.Popen(["xdg-open", url])
+        return True
+    except Exception:
+        return bool(webbrowser.open(url, new=1))
+
+
 @api_bp.route("/health")
 def health():
     return jsonify({"ok": True})
@@ -24,6 +44,32 @@ def health():
 @api_bp.route("/models")
 def models():
     return jsonify(current_app.services["lm_studio"].model_inventory())
+
+
+@api_bp.route("/settings")
+def settings():
+    return jsonify({"ok": True, "settings": current_app.services["settings_store"].load()})
+
+
+@api_bp.route("/settings/lm-studio-port", methods=["POST"])
+def update_lm_studio_port():
+    try:
+        payload = request.json or {}
+        settings = current_app.services["settings_store"].save_lm_studio_port(payload.get("port"))
+        return jsonify({"ok": True, "settings": settings, "models": current_app.services["lm_studio"].test_connection()})
+    except Exception as exc:
+        return _json_error(exc)
+
+
+@api_bp.route("/settings/test-lm-studio", methods=["POST"])
+def test_lm_studio_connection():
+    try:
+        payload = request.json or {}
+        if payload.get("port"):
+            current_app.services["settings_store"].save_lm_studio_port(payload.get("port"))
+        return jsonify({"ok": True, "models": current_app.services["lm_studio"].test_connection()})
+    except Exception as exc:
+        return _json_error(exc)
 
 
 @api_bp.route("/models/load", methods=["POST"])
@@ -172,6 +218,41 @@ def chat_history(history_id):
     return jsonify({"ok": True, "messages": messages})
 
 
+@api_bp.route("/files/ingest", methods=["POST"])
+def ingest_file():
+    uploaded_file = request.files.get("file")
+    if not uploaded_file:
+        return _json_error(AppError("Choose a file first.", "missing_file", 400))
+    try:
+        return jsonify({"ok": True, "file": current_app.services["file_ingestion"].extract_text(uploaded_file)})
+    except Exception as exc:
+        return _json_error(exc)
+
+
+@api_bp.route("/feedback/email", methods=["POST"])
+def open_feedback_email():
+    payload = request.json or {}
+    body = (payload.get("body") or "").strip() or "I want to share feedback about YouTube Summary App."
+    subject = (payload.get("subject") or "YouTube Summary App Feedback").strip()
+    mailto = f"mailto:{FEEDBACK_EMAIL}?subject={quote(subject)}&body={quote(body)}"
+    try:
+        opened = _open_external_url(mailto)
+    except Exception as exc:
+        return _json_error(AppError(f"Could not open your default email app: {exc}", "email_open_error", 500))
+    return jsonify({"ok": True, "opened": bool(opened), "email": FEEDBACK_EMAIL, "mailto": mailto})
+
+
+@api_bp.route("/support/donation", methods=["POST"])
+def open_donation():
+    if not DONATION_URL:
+        return _json_error(AppError("Donation link is not configured.", "donation_link_missing", 400))
+    try:
+        opened = _open_external_url(DONATION_URL)
+    except Exception as exc:
+        return _json_error(AppError(f"Could not open Ko-fi: {exc}", "donation_open_error", 500))
+    return jsonify({"ok": True, "opened": bool(opened), "url": DONATION_URL})
+
+
 @api_bp.route("/chat/stream", methods=["POST"])
 def chat_stream():
     payload = request.json or {}
@@ -187,15 +268,15 @@ def chat_stream():
                 model=payload.get("model", ""),
             ):
                 answer_parts.append(chunk)
-                yield f"data: {json.dumps({'delta': chunk})}\n\n"
+                yield f"data: {json.dumps({'delta': chunk}, ensure_ascii=False)}\n\n"
             answer = "".join(answer_parts)
             messages = current_app.services["chat_store"].append_pair(history_id, question, answer) if history_id else []
-            yield f"data: {json.dumps({'done': True, 'answer': answer, 'messages': messages})}\n\n"
+            yield f"data: {json.dumps({'done': True, 'answer': answer, 'messages': messages}, ensure_ascii=False)}\n\n"
         except Exception as exc:
             message = exc.message if isinstance(exc, AppError) else str(exc)
-            yield f"data: {json.dumps({'error': message})}\n\n"
+            yield f"data: {json.dumps({'error': message}, ensure_ascii=False)}\n\n"
 
-    return Response(stream_with_context(generate()), mimetype="text/event-stream")
+    return Response(stream_with_context(generate()), content_type="text/event-stream; charset=utf-8")
 
 
 @api_bp.route("/jobs", methods=["POST"])

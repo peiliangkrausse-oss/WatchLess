@@ -202,12 +202,10 @@ function selectedModelSupportsUploads() {
 
 function updateChatUploadControls() {
   const enabled = selectedModelSupportsUploads();
-  for (const button of [chatFileBtn, chatImageBtn]) {
-    button.disabled = !enabled;
-  }
-  const label = enabled ? "Upload available for this model" : "Upload unavailable for this model";
-  chatFileBtn.title = label;
-  chatImageBtn.title = label;
+  chatFileBtn.disabled = !enabled;
+  chatImageBtn.disabled = true;
+  chatFileBtn.title = enabled ? "Attach a readable file" : "File upload unavailable for this model";
+  chatImageBtn.title = "Image upload is not supported yet";
 }
 
 function setZoom(nextZoom) {

@@ -3,8 +3,10 @@ from pathlib import Path
 import youtube_summary_app.services.prompt_store as prompt_store_module
 from youtube_summary_app.app import create_app
 from youtube_summary_app.services.chat_store import ChatStore
+from youtube_summary_app.services.file_ingestion import FileIngestionService
 from youtube_summary_app.services.history_store import HistoryStore
 from youtube_summary_app.services.prompt_store import PromptStore
+from youtube_summary_app.services.settings_store import SettingsStore
 
 
 def test_chat_store_persists_messages(tmp_path: Path):
@@ -59,3 +61,46 @@ def test_app_health_and_empty_chat_question():
 
     assert response.status_code == 400
     assert response.json["error_type"] == "missing_chat_question"
+
+
+def test_feedback_email_endpoint_opens_mailto(monkeypatch):
+    opened_urls = []
+
+    def fake_open(url):
+        opened_urls.append(url)
+        return True
+
+    monkeypatch.setattr("youtube_summary_app.routes.api._open_external_url", fake_open)
+    app = create_app()
+    client = app.test_client()
+
+    response = client.post("/api/feedback/email", json={"body": "Bug report: special chars äöü", "subject": "Feedback"})
+
+    assert response.status_code == 200
+    assert response.json["opened"] is True
+    assert response.json["email"] == "peiliangkrausse@gmail.com"
+    assert opened_urls
+    assert opened_urls[0].startswith("mailto:peiliangkrausse@gmail.com")
+    assert "Bug%20report" in opened_urls[0]
+
+
+def test_settings_store_saves_valid_port(tmp_path: Path):
+    store = SettingsStore(tmp_path / "settings.json")
+
+    settings = store.save_lm_studio_port("4321")
+
+    assert settings["lm_studio_port"] == 4321
+    assert store.lm_studio_base_url() == "http://127.0.0.1:4321/v1"
+
+
+def test_file_ingestion_reads_text_file():
+    class Uploaded:
+        filename = "notes.txt"
+
+        def read(self):
+            return b"These are useful notes."
+
+    result = FileIngestionService().extract_text(Uploaded())
+
+    assert result["filename"] == "notes.txt"
+    assert result["text"] == "These are useful notes."

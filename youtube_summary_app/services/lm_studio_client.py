@@ -5,6 +5,7 @@ import requests
 
 from youtube_summary_app.config import LM_STUDIO_BASE_URL, LM_STUDIO_NATIVE_BASE_URL
 from youtube_summary_app.errors import ModelError
+from youtube_summary_app.services.settings_store import SettingsStore
 
 
 MEMORY_ERROR_TRIGGERS = [
@@ -31,9 +32,31 @@ def is_memory_or_model_load_error(message: str) -> bool:
 
 
 class LMStudioClient:
-    def __init__(self, base_url: str = LM_STUDIO_BASE_URL, native_base_url: str = LM_STUDIO_NATIVE_BASE_URL):
-        self.base_url = base_url.rstrip("/")
-        self.native_base_url = native_base_url.rstrip("/")
+    def __init__(
+        self,
+        base_url: str = LM_STUDIO_BASE_URL,
+        native_base_url: str = LM_STUDIO_NATIVE_BASE_URL,
+        settings_store: SettingsStore | None = None,
+    ):
+        self._base_url = base_url.rstrip("/")
+        self._native_base_url = native_base_url.rstrip("/")
+        self.settings_store = settings_store
+
+    @property
+    def base_url(self) -> str:
+        return self.settings_store.lm_studio_base_url() if self.settings_store else self._base_url
+
+    @property
+    def native_base_url(self) -> str:
+        return self.settings_store.lm_studio_native_base_url() if self.settings_store else self._native_base_url
+
+    def test_connection(self) -> dict:
+        status = self.model_inventory()
+        return {
+            **status,
+            "base_url": self.base_url,
+            "native_base_url": self.native_base_url,
+        }
 
     def list_models(self) -> list[str]:
         response = requests.get(f"{self.base_url}/models", timeout=5)
@@ -388,6 +411,7 @@ class LMStudioClient:
             ) as response:
                 if not response.ok:
                     raise ModelError(f"LM Studio error: {response.text}")
+                response.encoding = "utf-8"
                 for line in response.iter_lines(decode_unicode=True):
                     if not line:
                         continue

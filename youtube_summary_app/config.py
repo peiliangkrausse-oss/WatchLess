@@ -30,7 +30,7 @@ PROMPT_PRESETS_DIR = APP_SUPPORT_DIR / "prompt_presets"
 HISTORY_DIR = APP_SUPPORT_DIR / "history"
 CHAT_DIR = APP_SUPPORT_DIR / "chat"
 FEEDBACK_EMAIL = "peiliangkrausse@gmail.com"
-DONATION_URL = ""
+DONATION_URL = "https://ko-fi.com/peiliang_krausse"
 
 MAX_TRANSCRIPT_WORDS = 12000
 MAX_HISTORY_ITEMS = 80
