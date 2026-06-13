@@ -141,6 +141,14 @@ Small machines should use smaller quantized models. If the app says no model is 
 
 Technically, friends can download a DMG from email, open it, and run the app. Practically, email providers often block or warn on app attachments, and macOS Gatekeeper may warn if the app is not signed and notarized. For a smoother friend test, share the DMG through GitHub Releases, Google Drive, Dropbox, or a website, and use Apple notarization before a wider public release.
 
+Friend-test instructions live in:
+
+```text
+DOWNLOAD_INSTRUCTIONS.md
+GITHUB_RELEASE_NOTES_v1.0.0.md
+RELEASE_CHECKLIST.md
+```
+
 ## Build A DMG
 
 From the repo root:
