@@ -2,7 +2,9 @@
 
 A local macOS desktop app that summarizes YouTube videos with LM Studio.
 
-The app runs locally. You paste YouTube links, LM Studio runs the model on your machine, and summaries plus chat memory are saved on your Mac.
+The app runs locally. You paste YouTube links, LM Studio runs the model on your machine, and summaries plus chat memory are saved on your Mac. 
+
+The intelligence runs locally on your device. No cloud subscriptions, no fees, no usage limit. Everything runs on the cost of your electricity and device.
 
 ## Active Project Folder
 
