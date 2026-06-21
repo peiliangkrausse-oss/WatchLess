@@ -7,6 +7,7 @@ block_cipher = None
 project_dir = Path.cwd()
 package_dir = project_dir / "watchless_app"
 icon_file = project_dir / "App Icons" / "WatchLess.icns"
+entitlements_file = project_dir / "entitlements.plist"
 
 datas = [
     (str(package_dir / "templates"), "watchless_app/templates"),
@@ -46,7 +47,7 @@ exe = EXE(
     argv_emulation=False,
     target_arch=None,
     codesign_identity=None,
-    entitlements_file=None,
+    entitlements_file=str(entitlements_file),
 )
 
 coll = COLLECT(

@@ -1,6 +1,6 @@
 GITHUB RELEASE CHECKLIST
 
-Use this checklist to publish a free unsigned Mac build for friends.
+Use this checklist to publish a signed and notarized Mac build.
 
 
 1. BUILT ARTIFACT
@@ -53,15 +53,12 @@ The link will look like:
 4. SHORT MESSAGE TO SEND FRIENDS
 
 Download WatchLess.dmg from Assets, not Source code.
-Because this is a free unsigned Mac build, open it with right-click > Open the first time.
 You also need LM Studio installed, one model loaded, and the local server running on port 1234.
 Instructions are in DOWNLOAD_INSTRUCTIONS.txt.
 
 
 5. IF MACOS BLOCKS THE APP
 
-Tell testers to run:
+Do not publish the release yet. A signed and notarized DMG should open normally.
 
-   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
-
-This is the free workaround when the app is not notarized through Apple's paid developer program.
+Rebuild with ./publish.sh and confirm the script completed the notarization, stapler validation, and Gatekeeper assessment steps.

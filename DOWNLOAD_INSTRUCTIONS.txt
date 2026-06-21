@@ -34,21 +34,15 @@ Do not download "Source code" unless you are a developer. Normal users need the 
 
 4. FIRST LAUNCH ON MACOS
 
-This is a free unsigned test build. Apple may warn that it cannot verify the app.
+The release DMG should be signed and notarized by Apple, so the app should open normally after you copy it to Applications.
 
-Try this first:
+To open it:
 
 1. Open Applications.
 2. Find WatchLess.
-3. Right-click or Control-click the app.
-4. Choose Open.
-5. Confirm Open again if macOS asks.
+3. Double-click the app.
 
-If macOS still blocks it, open Terminal and run:
-
-   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
-
-Then open the app again.
+If macOS says Apple could not verify the app, stop and report the exact message. That means the release was not notarized correctly.
 
 
 5. SET UP LM STUDIO

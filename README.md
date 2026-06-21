@@ -11,10 +11,10 @@ The intelligence runs locally on your device. No cloud subscriptions, no fees, n
 Use this folder:
 
 ```bash
-/Users/sam/Documents/Youtube Summary App
+/Users/sam/Desktop/Vibe Code Projects/Youtube Summary App
 ```
 
-The older Desktop folder is not the active source of truth.
+The older Documents folder is not the active source of truth.
 
 ## What Is In This Repo
 
@@ -167,15 +167,11 @@ dist/WatchLess.app
 dist/WatchLess.dmg
 ```
 
-Friends can download the DMG, open it, drag the app into Applications, then right-click the app and choose **Open** the first time.
+Friends can download the DMG, open it, drag the app into Applications, and open it normally.
 
 ## Signed And Notarized Builds
 
-Local unsigned/ad-hoc builds work with:
-
-```bash
-./publish.sh
-```
+`./publish.sh` now requires Apple Developer signing and notarization details. This prevents accidentally publishing a DMG that macOS blocks with "Apple could not verify this app is free of malware."
 
 For Developer ID signing and Apple notarization, export these values first:
 
@@ -187,7 +183,17 @@ export NOTARY_PASSWORD="app-specific-password"
 ./publish.sh
 ```
 
-`publish.sh` signs the app, creates the DMG, signs the DMG, submits it to Apple, and staples the notarization ticket when credentials are present.
+`SIGN_IDENTITY` is the certificate from a paid Apple Developer account. `NOTARY_PASSWORD` should be an Apple app-specific password for the Apple ID used with notarization.
+
+Local unsigned/ad-hoc builds are still available for development only:
+
+```bash
+./publish.sh --unsigned-local
+```
+
+Unsigned local builds may trigger Gatekeeper warnings and should not be used for public releases.
+
+`publish.sh` signs the app, creates the DMG, signs the DMG, submits it to Apple, staples the notarization ticket, validates the staple, and checks Gatekeeper assessment.
 
 ## Versioning
 

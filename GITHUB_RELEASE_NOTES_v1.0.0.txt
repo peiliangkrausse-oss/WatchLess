@@ -28,20 +28,14 @@ SHA-256: 91f7e874de6561c85da93d5ba188533799391ade5054d08c908569c7d0d2d9c4
 
 Important first launch note:
 
-This is an unsigned, non-notarized friend-test build. macOS may warn that it cannot verify the app.
+This release is intended to be signed and notarized so macOS can verify it.
 
 To open it:
 
 1. Move the app to Applications.
-2. Right-click or Control-click WatchLess.
-3. Choose Open.
-4. Confirm Open again.
+2. Double-click WatchLess.
 
-If macOS still blocks it, run this in Terminal:
-
-   xattr -dr com.apple.quarantine "/Applications/WatchLess.app"
-
-Then open the app again.
+If macOS says Apple could not verify the app, please report the exact message.
 
 
 LM Studio is required:
@@ -72,7 +66,6 @@ What's included:
 Known limitations:
 
 - macOS only.
-- Not signed or notarized.
 - Requires LM Studio setup.
 - Windows build is not included.
 - Image upload is not supported yet.
